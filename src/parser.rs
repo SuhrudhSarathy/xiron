@@ -9,6 +9,14 @@ pub struct WallConfig
 }
 
 #[derive(Debug, Deserialize, Serialize)]
+pub struct StaticObjConfig
+{
+    pub center: (f32, f32),
+    pub width: f32,
+    pub height: f32,
+}
+
+#[derive(Debug, Deserialize, Serialize)]
 pub struct RobotConfig
 {
     pub id: String,
@@ -20,7 +28,8 @@ pub struct RobotConfig
 pub struct Config
 {
     pub robots: Vec<RobotConfig>,
-    pub walls: Vec<WallConfig>
+    pub walls: Vec<WallConfig>,
+    pub static_objects: Vec<StaticObjConfig>,
 }
 
 pub fn get_config_from_file(path: String) -> Config

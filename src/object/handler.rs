@@ -1,5 +1,6 @@
 use super::robot::Robot;
 use super::wall::Wall;
+use super::static_obj::StaticObj;
 use crate::behaviour::traits::{Collidable, Drawable};
 use crate::parameter::*;
 use crate::parser::get_config_from_file;
@@ -44,6 +45,11 @@ impl SimulationHandler
             sim_handle.add_wall(Wall::new(wall.endpoints.clone()));
         }
 
+        for obj in config.static_objects.iter()
+        {
+            sim_handle.add_static_obj(StaticObj::new(obj.center, obj.width, obj.height));
+        }
+
         return (sim_handle, robot_handles);
     }
 
@@ -58,6 +64,12 @@ impl SimulationHandler
     {
         self.objects.push(Box::new(wall.clone()));
         self.artists.push(Box::new(wall.clone()));
+    }
+
+    pub fn add_static_obj(&mut self, obj: StaticObj)
+    {
+        self.objects.push(Box::new(obj.clone()));
+        self.artists.push(Box::new(obj.clone()));
     }
 
     pub fn control(&mut self, robot: &RobotHandler, control: (f32, f32))
