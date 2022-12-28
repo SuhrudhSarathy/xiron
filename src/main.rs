@@ -23,7 +23,7 @@ fn window_config() -> Conf
 
 #[macroquad::main(window_config)]
 async fn main() {
-    let (mut sim_handler, robot_handlers) = SimulationHandler::from_file("/Users/suhrudh/programming/rust/hummer/config.yaml".to_owned());
+    let (mut sim_handler, robot_handlers) = SimulationHandler::from_file("./src/config.yaml".to_owned());
     let robot0_handle = robot_handlers[0].clone();
     loop {
         clear_background(WHITE);
