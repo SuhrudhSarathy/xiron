@@ -14,7 +14,7 @@ fn window_config() -> Conf
 {
     Conf
     {
-        window_title: "hummer".to_owned(),
+        window_title: "Xiron".to_owned(),
         window_height: HEIGHT as i32,
         window_width: WIDTH as i32,
         ..Default::default()
