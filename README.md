@@ -24,3 +24,10 @@ In `main.rs`, an example to move the robot using arrows keys is given. To run th
 ```
 cargo run
 ```
+<p align="center">
+    <img src="images/screen.png" 
+        alt="Picture" 
+        width="500" 
+        height="500" 
+        style="display: block; margin: 0 auto" />
+</p>

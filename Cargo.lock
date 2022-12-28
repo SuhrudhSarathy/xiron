@@ -189,16 +189,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4d13cdbd5dbb29f9c88095bbdc2590c9cba0d0a1269b983fef6b2cdd7e9f4db1"
 
 [[package]]
-name = "hummer"
-version = "0.1.0"
-dependencies = [
- "macroquad",
- "parry2d",
- "serde",
- "serde_yaml",
-]
-
-[[package]]
 name = "image"
 version = "0.24.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -698,3 +688,13 @@ name = "winapi-x86_64-pc-windows-gnu"
 version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "712e227841d057c1ee1cd2fb22fa7e5a5461ae8e48fa2ca79ec42cfc1931183f"
+
+[[package]]
+name = "xiron"
+version = "0.1.0"
+dependencies = [
+ "macroquad",
+ "parry2d",
+ "serde",
+ "serde_yaml",
+]

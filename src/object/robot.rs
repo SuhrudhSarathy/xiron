@@ -3,7 +3,7 @@ use parry2d::shape::Ball;
 use macroquad::prelude::*;
 
 use crate::behaviour::traits::{Drawable};
-use crate::parameter::RESOLUTION;
+use crate::parameter::{RESOLUTION, DT};
 
 pub fn normalise(mut theta: f32) -> f32 {
     if theta > PI {
@@ -50,9 +50,9 @@ impl Robot {
     }
 
     pub fn next(&mut self) -> (f32, f32, f32) {
-        let theta = normalise(self.pose.2 + self.vel.1 * 0.1);
-        let x = self.pose.0 + self.vel.0 * self.pose.2.cos() * 0.1;
-        let y = self.pose.1 + self.vel.0 * self.pose.2.sin() * 0.1;
+        let theta = normalise(self.pose.2 + self.vel.1 * DT);
+        let x = self.pose.0 + self.vel.0 * self.pose.2.cos() * DT;
+        let y = self.pose.1 + self.vel.0 * self.pose.2.sin() * DT;
 
         return (x, y, theta);
     }
