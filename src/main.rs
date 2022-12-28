@@ -1,10 +1,8 @@
 pub mod object;
 pub mod behaviour;
 pub mod parameter;
+pub mod parser;
 
-
-use crate::object::robot::Robot;
-use crate::object::wall::Wall;
 use crate::object::handler::{SimulationHandler};
 use crate::parameter::*;
 
@@ -25,20 +23,8 @@ fn window_config() -> Conf
 
 #[macroquad::main(window_config)]
 async fn main() {
-    let robot0 = Robot::new(String::from("robot0"), (0.0, 1.0, 0.0), (0.0, 0.0));
-
-    let mut wall_coords: Vec<(f32, f32)> = Vec::new();
-
-    wall_coords.push((1.5, 0.0));
-    wall_coords.push((1.5, 3.0));
-    wall_coords.push((5.5, 3.0));
-
-    let wall = Wall::new(wall_coords);
-
-    let mut sim_handler = SimulationHandler::new();
-    let robot0_handle = sim_handler.add_robot(robot0);
-    sim_handler.add_wall(wall);
-
+    let (mut sim_handler, robot_handlers) = SimulationHandler::from_file("/Users/suhrudh/programming/rust/hummer/config.yaml".to_owned());
+    let robot0_handle = robot_handlers[0].clone();
     loop {
         clear_background(WHITE);
 
@@ -65,7 +51,6 @@ async fn main() {
         {
             vel.0 = -0.5;
         }
-
         sim_handler.control(&robot0_handle, vel);
 
         next_frame().await

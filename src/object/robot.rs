@@ -67,7 +67,7 @@ impl Drawable for Robot
     fn draw(&self, tf: fn((f32, f32))->(f32, f32))
     {
         let tf_pos = tf((self.pose.0, self.pose.1));
-        draw_circle(tf_pos.0, tf_pos.1, self.radius/RESOLUTION, BLACK);
+        draw_circle(tf_pos.0, tf_pos.1, self.radius/RESOLUTION, GRAY);
         
         let x2: f32 = self.pose.0 + self.radius * self.pose.2.cos();
         let y2: f32 = self.pose.1 + self.radius * self.pose.2.sin();

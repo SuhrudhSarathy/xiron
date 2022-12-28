@@ -2,7 +2,9 @@ use super::robot::Robot;
 use super::wall::Wall;
 use crate::behaviour::traits::{Collidable, Drawable};
 use crate::parameter::*;
+use crate::parser::get_config_from_file;
 
+#[derive(Debug, Clone, Copy)]
 pub struct RobotHandler
 {
     id: usize,
@@ -21,6 +23,28 @@ impl SimulationHandler
     pub fn new() -> SimulationHandler
     {
         return SimulationHandler {robots: Vec::new(), objects: Vec::new(), artists: Vec::new(),};
+    }
+
+    pub fn from_file(filepath: String) -> (SimulationHandler, Vec<RobotHandler>)
+    {
+        let config = get_config_from_file(filepath);
+
+        let mut sim_handle = SimulationHandler::new();
+
+        let mut robot_handles = Vec::new();
+
+        for robot in config.robots.iter()
+        {
+            let handle = sim_handle.add_robot(Robot::new(robot.id.clone(), robot.pose, robot.vel));
+            robot_handles.push(handle);
+        }
+
+        for wall in config.walls.iter()
+        {
+            sim_handle.add_wall(Wall::new(wall.endpoints.clone()));
+        }
+
+        return (sim_handle, robot_handles);
     }
 
     pub fn add_robot(&mut self, robot: Robot) -> RobotHandler
@@ -57,7 +81,6 @@ impl SimulationHandler
                 break;
                }
             }
-
             if !collision
             {
                 robot.step(&next_pose); 
