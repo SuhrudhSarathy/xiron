@@ -1,2 +1,3 @@
-pub mod traits;
 pub mod collide;
+pub mod sense;
+pub mod traits;
