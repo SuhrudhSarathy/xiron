@@ -27,7 +27,7 @@ impl Sensable for LiDAR {
         LiDARMsg {
             angle_min: self.angle_min,
             angle_max: self.angle_max,
-            angle_increment: self.angle_increment,
+            num_readings: self.num_readings,
             values: values,
         }
     }

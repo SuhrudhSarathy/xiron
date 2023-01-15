@@ -93,6 +93,7 @@ impl SimulationHandler {
             }
             if !collision {
                 robot.step(&next_pose);
+                // println!("{}: {}, {}, {}", robot.id, robot.pose.0, robot.pose.1, robot.pose.2);
             }
         }
     }
@@ -114,3 +115,7 @@ impl SimulationHandler {
         return (i, j);
     }
 }
+
+unsafe impl Sync for SimulationHandler {}
+
+unsafe impl Send for SimulationHandler {}

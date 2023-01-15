@@ -8,6 +8,7 @@ async fn main() {
     let (mut sim_handler, robot_handlers) =
         SimulationHandler::from_file("./examples/config.yaml".to_owned());
     let robot0_handle = robot_handlers[0].clone();
+    
     loop {
         clear_background(WHITE);
 
@@ -31,7 +32,6 @@ async fn main() {
         sim_handler.control(&robot0_handle, vel);
 
         let lidar_msg = sim_handler.sense(&robot0_handle);
-        println!("{:?}", lidar_msg.values);
 
         next_frame().await
     }

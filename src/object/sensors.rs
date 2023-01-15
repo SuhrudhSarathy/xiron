@@ -10,7 +10,7 @@ pub struct LiDAR {
     // data for sending
     pub angle_min: f32,
     pub angle_max: f32,
-    pub angle_increment: f32,
+    pub num_readings: i32,
 }
 
 impl LiDAR {
@@ -18,10 +18,12 @@ impl LiDAR {
         let mut rays = Vec::new();
         let angle_min = -PI;
         let angle_max = PI;
-        let angle_increment = PI / 10.0;
-        for theta in ((angle_min as i32 * 100)..(angle_max as i32 * 100))
-            .step_by((angle_increment * 100.0) as usize)
+        let num_readings : i32= 180;
+        let dtheta = (angle_max - angle_min)/num_readings as f32;
+        
+        for dt in 0..num_readings
         {
+            let theta = angle_min + dt as f32 * dtheta;
             let angle = pose.2 + theta as f32 * 0.01;
             let ray = Ray::new(
                 Point::new(pose.0, pose.1),
@@ -36,15 +38,16 @@ impl LiDAR {
             rays: rays,
             angle_min: angle_min,
             angle_max: angle_max,
-            angle_increment: angle_increment,
+            num_readings: num_readings,
         }
     }
 
     pub fn translate_to(&mut self, new_pose: (f32, f32, f32)) {
         let mut rays = Vec::new();
-        for theta in ((self.angle_min as i32 * 100)..(self.angle_max as i32 * 100))
-            .step_by((self.angle_increment * 100.0) as usize)
+        let dtheta = (self.angle_max - self.angle_min)/self.num_readings as f32;
+        for dt in 0..self.num_readings
         {
+            let theta = self.angle_min + dt as f32 * dtheta;
             let angle = self.pose.2 + theta as f32 * 0.01;
             let ray = Ray::new(
                 Point::new(self.pose.0, self.pose.1),
@@ -61,6 +64,6 @@ impl LiDAR {
 pub struct LiDARMsg {
     pub angle_min: f32,
     pub angle_max: f32,
-    pub angle_increment: f32,
+    pub num_readings: i32,
     pub values: Vec<f32>,
 }
