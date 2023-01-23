@@ -20,10 +20,8 @@ cargo build
 ```
 
 # Example
-In `main.rs`, an example to move the robot using arrows keys is given. To run the example
-```
-cargo run
-```
+Examples are in the [examples](examples) directory.w
+
 <p align="center">
     <img src="images/screen.png" 
         alt="Picture" 

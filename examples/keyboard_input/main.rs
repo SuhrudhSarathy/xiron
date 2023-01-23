@@ -6,7 +6,7 @@ use xiron::prelude::*;
 #[macroquad::main(xiron)]
 async fn main() {
     let (mut sim_handler, robot_handlers) =
-        SimulationHandler::from_file("./examples/config.yaml".to_owned());
+        SimulationHandler::from_file("examples/keyboard_input/congif.yaml".to_owned());
     let robot0_handle = robot_handlers[0].clone();
     
     loop {
@@ -30,8 +30,6 @@ async fn main() {
             vel.0 = -0.5;
         }
         sim_handler.control(&robot0_handle, vel);
-
-        let lidar_msg = sim_handler.sense(&robot0_handle);
 
         next_frame().await
     }

@@ -28,6 +28,8 @@ pub struct PathController
 
     i: usize,
     state: PathControllerState,
+    prev_dist_error: f32,
+    prev_angle_error: f32,
 }
 
 impl PathController
@@ -41,10 +43,12 @@ impl PathController
             current_path_index: 0,
             kp: 0.1,
             kd: 10.0,
-            max_vel: (0.5, 1.0),
+            max_vel: (0.75, 1.0),
             path: Vec::new(),
             i: 0,
-            state: PathControllerState::Init
+            state: PathControllerState::Init,
+            prev_dist_error: 0.0,
+            prev_angle_error: 0.0
         }
     }
 
@@ -67,7 +71,7 @@ impl PathController
     /* Main controller function. 
     Given the current pose and a tolerance, returns the control input for that time 
     */
-    pub fn control(&mut self, current_pose: (f32, f32, f32)) -> (f32, f32)
+    pub fn control(&mut self, current_pose: &(f32, f32, f32)) -> (f32, f32)
     {
         if self.i == self.path.len()
         {
@@ -76,12 +80,12 @@ impl PathController
 
         else 
         {
-            let dx = current_pose.0 - self.path[self.i].0;
-            let dy = current_pose.1 - self.path[self.i].1;
+            let dx = self.path[self.i].0 - current_pose.0;
+            let dy = self.path[self.i].1 - current_pose.1;
 
             let ddist = (dx * dx + dy * dy).sqrt();
 
-            let dtheta = normalise(current_pose.2 - self.path[self.i].2);
+            let dtheta = normalise(dy.atan2(dx) - current_pose.2);
 
             // Select state based on the current condition.
             if dtheta.abs() < self.atolerance
@@ -112,7 +116,7 @@ impl PathController
                 PathControllerState::Idle => {return (0.0, 0.0)},
                 PathControllerState::Angular =>
                 {
-                    let mut vel = self.kp * dtheta;
+                    let mut vel = self.kp * dtheta + self.kd * self.prev_angle_error;
                     if vel < -self.max_vel.1
                     {
                         vel = -self.max_vel.1;
@@ -121,11 +125,12 @@ impl PathController
                         vel = self.max_vel.1;
                     }
 
+                    self.prev_angle_error = dtheta;
                     return (0.0, vel);
                 }
                 PathControllerState::Linear =>
                 {
-                    let mut vel = self.kp * ddist;
+                    let mut vel = self.kp * ddist + self.kd * self.prev_dist_error;
                     if vel < -self.max_vel.0
                     {
                         vel = -self.max_vel.0;
@@ -134,6 +139,7 @@ impl PathController
                         vel = self.max_vel.0;
                     }
 
+                    self.prev_dist_error = ddist;
                     return (vel, 0.0);
                 }
             }
