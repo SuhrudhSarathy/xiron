@@ -8,7 +8,7 @@ async fn main() {
     let (mut sim_handler, robot_handlers) =
         SimulationHandler::from_file("examples/keyboard_input/congif.yaml".to_owned());
     let robot0_handle = robot_handlers[0].clone();
-    
+
     loop {
         clear_background(WHITE);
 

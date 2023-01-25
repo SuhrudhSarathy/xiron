@@ -79,9 +79,8 @@ impl SimulationHandler {
     pub fn sense(&self, robot: &RobotHandler) -> LiDARMsg {
         return self.robots[robot.id].sense(&self.objects);
     }
-    
-    pub fn get_pose(&self, robot: &RobotHandler) -> (f32, f32, f32)
-    {
+
+    pub fn get_pose(&self, robot: &RobotHandler) -> (f32, f32, f32) {
         return self.robots[robot.id].pose;
     }
 

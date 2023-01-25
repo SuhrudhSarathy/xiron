@@ -6,4 +6,6 @@ pub mod wall;
 
 pub use handler::*;
 pub use robot::*;
+pub use sensors::*;
+pub use static_obj::*;
 pub use wall::*;

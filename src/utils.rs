@@ -36,8 +36,7 @@ pub fn sleep(time_ms: u64) {
     thread::sleep(Duration::from_millis(time_ms));
 }
 
-pub fn spin()
-{
+pub fn spin() {
     loop {
         sleep(10000);
     }

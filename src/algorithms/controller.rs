@@ -3,9 +3,7 @@
 use crate::object::handler::RobotHandler;
 use crate::utils::normalise;
 
-
-pub enum PathControllerState
-{
+pub enum PathControllerState {
     Init,
     Angular,
     Linear,
@@ -13,8 +11,7 @@ pub enum PathControllerState
     Idle,
 }
 
-pub struct PathController
-{
+pub struct PathController {
     pub robot: RobotHandler,
     pub dtolerance: f32,
     pub atolerance: f32,
@@ -32,10 +29,8 @@ pub struct PathController
     prev_angle_error: f32,
 }
 
-impl PathController
-{
-    pub fn new(robot: RobotHandler, dtolerance: f32, atolerance: f32) -> PathController
-    {
+impl PathController {
+    pub fn new(robot: RobotHandler, dtolerance: f32, atolerance: f32) -> PathController {
         PathController {
             robot: robot,
             dtolerance: dtolerance,
@@ -48,38 +43,30 @@ impl PathController
             i: 0,
             state: PathControllerState::Init,
             prev_dist_error: 0.0,
-            prev_angle_error: 0.0
+            prev_angle_error: 0.0,
         }
     }
 
-    pub fn set_path(&mut self, path: Vec<(f32, f32, f32)>)
-    {
+    pub fn set_path(&mut self, path: Vec<(f32, f32, f32)>) {
         self.path = path;
     }
 
-    pub fn set_gains(&mut self, kp: f32, kd: f32)
-    {
+    pub fn set_gains(&mut self, kp: f32, kd: f32) {
         self.kp = kp;
         self.kd = kd;
     }
 
-    pub fn set_max_vel(&mut self, max_vel: (f32, f32))
-    {
+    pub fn set_max_vel(&mut self, max_vel: (f32, f32)) {
         self.max_vel = max_vel;
     }
 
-    /* Main controller function. 
-    Given the current pose and a tolerance, returns the control input for that time 
+    /* Main controller function.
+    Given the current pose and a tolerance, returns the control input for that time
     */
-    pub fn control(&mut self, current_pose: &(f32, f32, f32)) -> (f32, f32)
-    {
-        if self.i == self.path.len()
-        {
+    pub fn control(&mut self, current_pose: &(f32, f32, f32)) -> (f32, f32) {
+        if self.i == self.path.len() {
             self.state = PathControllerState::Idle;
-        }
-
-        else 
-        {
+        } else {
             let dx = self.path[self.i].0 - current_pose.0;
             let dy = self.path[self.i].1 - current_pose.1;
 
@@ -88,54 +75,40 @@ impl PathController
             let dtheta = normalise(dy.atan2(dx) - current_pose.2);
 
             // Select state based on the current condition.
-            if dtheta.abs() < self.atolerance
-            {
-                if ddist.abs() < self.dtolerance
-                {
+            if dtheta.abs() < self.atolerance {
+                if ddist.abs() < self.dtolerance {
                     self.state = PathControllerState::Step;
-                }
-
-                else if ddist.abs() >= self.dtolerance
-                {
+                } else if ddist.abs() >= self.dtolerance {
                     self.state = PathControllerState::Linear;
                 }
-                
-            }
-            else if dtheta.abs() >= self.atolerance {
+            } else if dtheta.abs() >= self.atolerance {
                 self.state = PathControllerState::Angular;
             }
 
             /* Return velocities based on the state of the robot */
-            match self.state
-            {
-                PathControllerState::Init => {return (0.0, 0.0)},
+            match self.state {
+                PathControllerState::Init => return (0.0, 0.0),
                 PathControllerState::Step => {
                     self.i += 1;
                     return (0.0, 0.0);
                 }
-                PathControllerState::Idle => {return (0.0, 0.0)},
-                PathControllerState::Angular =>
-                {
+                PathControllerState::Idle => return (0.0, 0.0),
+                PathControllerState::Angular => {
                     let mut vel = self.kp * dtheta + self.kd * self.prev_angle_error;
-                    if vel < -self.max_vel.1
-                    {
+                    if vel < -self.max_vel.1 {
                         vel = -self.max_vel.1;
-                    }
-                    else if vel > self.max_vel.1 {
+                    } else if vel > self.max_vel.1 {
                         vel = self.max_vel.1;
                     }
 
                     self.prev_angle_error = dtheta;
                     return (0.0, vel);
                 }
-                PathControllerState::Linear =>
-                {
+                PathControllerState::Linear => {
                     let mut vel = self.kp * ddist + self.kd * self.prev_dist_error;
-                    if vel < -self.max_vel.0
-                    {
+                    if vel < -self.max_vel.0 {
                         vel = -self.max_vel.0;
-                    }
-                    else if vel > self.max_vel.0 {
+                    } else if vel > self.max_vel.0 {
                         vel = self.max_vel.0;
                     }
 
@@ -143,9 +116,8 @@ impl PathController
                     return (vel, 0.0);
                 }
             }
-
         }
 
-        return (0.0, 0.0)
+        return (0.0, 0.0);
     }
 }
