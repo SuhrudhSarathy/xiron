@@ -5,6 +5,7 @@ use super::wall::Wall;
 use crate::behaviour::traits::{Collidable, Drawable};
 use crate::parameter::*;
 use crate::parser::get_config_from_file;
+use crate::prelude::{DynamicObj, PathController};
 
 #[derive(Debug, Clone, Copy)]
 pub struct RobotHandler {

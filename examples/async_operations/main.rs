@@ -6,6 +6,8 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 
 use xiron::prelude::*;
+use macroquad::prelude::*;
+use macroquad::Window;
 
 async fn step(sh: Arc<Mutex<SimulationHandler>>) {
     loop {
@@ -34,7 +36,6 @@ async fn control(sh: Arc<Mutex<SimulationHandler>>, r: &RobotHandler, mut p: Pat
         tokio::time::sleep(Duration::from_millis(100)).await;
     }
 }
-
 #[tokio::main]
 async fn main() {
     // Initialise the simulation handler and robot handlers
@@ -68,7 +69,7 @@ async fn main() {
     let control_task = tokio::spawn(async move {
         control(simhandler_mutex2, &robot0_handle, path_controller).await;
     });
-
+    
     // wait for the tasks
     step_task.await.unwrap();
     control_task.await.unwrap();

@@ -44,3 +44,21 @@ impl Collidable for StaticObj {
         return f32::min(self.height, self.width);
     }
 }
+
+impl Collidable for DynamicObj
+{
+    fn get_pose(&self) -> (f32, f32, f32) 
+    {
+        return (self.current_pose.0, self.current_pose.1, self.current_pose.2);
+    }
+    
+    fn get_shape(&self) -> Box<dyn Shape> 
+    {
+        return Box::new(self.shape);
+    }
+    
+    fn get_max_extent(&self) -> f32 
+    {
+        return 2.0 * self.radius;
+    }
+}

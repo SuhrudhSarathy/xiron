@@ -18,9 +18,9 @@ pub struct StaticObj {
 impl StaticObj {
     pub fn new(center: (f32, f32), width: f32, height: f32) -> StaticObj {
         StaticObj {
-            center: center,
-            width: width,
-            height: height,
+            center,
+            width,
+            height,
 
             shape: Cuboid::new(Vector::new(width * 0.5, height * 0.5)),
         }
