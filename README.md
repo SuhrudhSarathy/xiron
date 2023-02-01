@@ -20,7 +20,7 @@ cargo build
 ```
 
 # Example
-Examples are in the [examples](examples) directory.w
+Examples are in the [examples](examples) directory.
 
 <p align="center">
     <img src="images/screen.png" 
@@ -29,3 +29,6 @@ Examples are in the [examples](examples) directory.w
         height="500" 
         style="display: block; margin: 0 auto" />
 </p>
+
+# World Editor
+You can use the [World Editor](src/bin/world_editor.rs) to create a config file using a GUI. That config file can be then used to load the simulation world.
