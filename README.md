@@ -32,3 +32,11 @@ Examples are in the [examples](examples) directory.
 
 # World Editor
 You can use the [World Editor](src/bin/world_editor.rs) to create a config file using a GUI. That config file can be then used to load the simulation world.
+
+<p align="center">
+    <img src="images/world_editor.png" 
+        alt="Picture" 
+        width="500" 
+        height="500" 
+        style="display: block; margin: 0 auto" />
+</p>
