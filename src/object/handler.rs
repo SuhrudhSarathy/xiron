@@ -5,7 +5,6 @@ use super::wall::Wall;
 use crate::behaviour::traits::{Collidable, Drawable};
 use crate::parameter::*;
 use crate::parser::get_config_from_file;
-use crate::prelude::{DynamicObj, PathController};
 
 #[derive(Debug, Clone, Copy)]
 pub struct RobotHandler {
@@ -101,6 +100,19 @@ impl SimulationHandler {
                 // println!("{}: {}, {}, {}", robot.id, robot.pose.0, robot.pose.1, robot.pose.2);
             }
         }
+    }
+    
+    pub fn collision_status_at(&self, roboth: &RobotHandler, pose: &(f32, f32, f32)) -> bool
+    {
+        let robot = self.robots[roboth.id].clone();
+        for object in self.objects.iter()
+        {
+            let collision = robot.collision_check_at(object.as_ref(), pose);
+            if collision{
+                return true;
+            }
+        }
+        return false;
     }
 
     pub fn draw(&self) {

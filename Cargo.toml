@@ -11,3 +11,15 @@ macroquad = "0.3.25"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 tokio = {version = "1.0", features = ["full"]}
+
+[[bin]]
+name="world_editor"
+
+[[example]]
+name="async_operations"
+
+[[example]]
+name="path_tracking"
+
+[[example]]
+name="keyboard_input"
