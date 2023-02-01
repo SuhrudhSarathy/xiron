@@ -6,8 +6,6 @@ use std::time::Duration;
 use tokio::sync::Mutex;
 
 use xiron::prelude::*;
-use macroquad::prelude::*;
-use macroquad::Window;
 
 async fn step(sh: Arc<Mutex<SimulationHandler>>) {
     loop {
