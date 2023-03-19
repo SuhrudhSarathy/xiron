@@ -11,6 +11,7 @@ macroquad = "0.3.25"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
 tokio = {version = "1.0", features = ["full"]}
+rand = "0.8.5"
 
 [[bin]]
 name="world_editor"
