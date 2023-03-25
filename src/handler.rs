@@ -1,7 +1,7 @@
-use super::robot::Robot;
-use super::sensors::LiDARMsg;
-use super::static_obj::StaticObj;
-use super::wall::Wall;
+use crate::object::robot::Robot;
+use crate::object::sensors::LiDARMsg;
+use crate::object::static_obj::StaticObj;
+use crate::object::wall::Wall;
 use crate::behaviour::traits::{Collidable, Drawable};
 use crate::parameter::*;
 use crate::parser::get_config_from_file;

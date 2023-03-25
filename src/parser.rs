@@ -1,5 +1,6 @@
 use serde::{Deserialize, Serialize};
 use serde_yaml;
+use serde_json;
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct WallConfig {
@@ -29,9 +30,21 @@ pub struct Config {
 }
 
 pub fn get_config_from_file(path: String) -> Config {
-    let file = std::fs::File::open(path).expect("File not openble");
+    let file = std::fs::File::open(path).expect("File not openable");
     let config: Config =
         serde_yaml::from_reader(file).expect("Couldn't read config file. Rewrite properly");
 
+    return config;
+}
+
+pub fn get_config_to_string(config: Config) -> String
+{
+    let value = serde_json::to_string(&config).expect("Couldn't convert the config to String");
+    return value.to_string();
+}
+
+pub fn get_config_from_string(string: String) -> Config
+{
+    let config: Config = serde_json::from_str(&string).expect("Couldn't convert the config");
     return config;
 }
