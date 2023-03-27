@@ -2,19 +2,19 @@ use serde::{Deserialize, Serialize};
 use serde_yaml;
 use serde_json;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct WallConfig {
     pub endpoints: Vec<(f32, f32)>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct StaticObjConfig {
     pub center: (f32, f32),
     pub width: f32,
     pub height: f32,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct RobotConfig {
     pub id: String,
     pub pose: (f32, f32, f32),
@@ -22,7 +22,7 @@ pub struct RobotConfig {
     pub lidar: bool,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct Config {
     pub robots: Vec<RobotConfig>,
     pub walls: Vec<WallConfig>,

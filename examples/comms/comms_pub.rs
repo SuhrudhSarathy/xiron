@@ -8,7 +8,7 @@ fn main()
     let context = zmq::Context::new();
     let publisher =  context.socket(zmq::PUB).unwrap();
 
-    publisher.bind("tcp://*:5557").expect("Could not bind publisher socket");
+    publisher.bind("tcp://*:8080").expect("Could not bind publisher socket");
 
     println!("Waiting for subscriber to connect");
     sleep(Duration::from_millis(1000));
@@ -19,7 +19,7 @@ fn main()
         publisher
             .send(&format!("{:03}", 1), zmq::SNDMORE)
             .unwrap();
-        publisher.send(&format!("Hello World. {}", i), 0).unwrap();
+        publisher.send(&format!("Hello World. {}", i), 1).unwrap();
         sleep(Duration::from_millis(1000));
         i += 1;
     }
