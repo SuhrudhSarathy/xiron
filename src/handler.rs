@@ -11,7 +11,7 @@ use crate::parser::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct RobotHandler {
-    id: usize,
+    pub id: usize,
 }
 
 impl RobotHandler

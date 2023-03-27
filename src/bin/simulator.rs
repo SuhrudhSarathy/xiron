@@ -2,7 +2,6 @@ use xiron::prelude::*;
 use std::thread::sleep;
 use std::time::Duration;
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
 
 use tokio::sync::mpsc;
 
@@ -28,8 +27,9 @@ async fn main()
             println!("Connected to control publisher at tcp://localhost:8081");
             controller_connected = true;
         }
-        Err(_)=> {
+        Err(e)=> {
             println!("Could not connect to control publisher at tcp://localhost:8081. Will keep retrying");
+            println!("Error: {}", e);
             controller_connected = false;}
     }
                 
@@ -44,8 +44,6 @@ async fn main()
     // create the channel for recieving control commands
     let (tx, mut rx) = mpsc::channel(100);
 
-    let robot_map_mutex: Arc<Mutex<HashMap<String, RobotHandler>>> = Arc::new(Mutex::new(robot_map));
-
     let control_send_task = tokio::spawn(async move {
         loop {
 
@@ -59,18 +57,45 @@ async fn main()
                         let subscription = format!("{:03}", 1).into_bytes();
                         controller.set_subscribe(&subscription).unwrap();
                     }
-                    Err(_) => {controller_connected = false;}
+                    Err(e) => {
+                        controller_connected = false;
+                        println!("Error: {}", e);
+                    }
                 }
             }
             else {
                 // Get the control input from the socket
-                let _ = controller.recv_msg(0).unwrap();
-                let data = controller.recv_msg(0).unwrap();
+                let topic = controller.recv_msg(1).unwrap();
+                println!("Got Data: {:?}", topic) ;
+                let data = controller.recv_msg(1).unwrap();
 
+                
+
+                // Convert the message to string
+                let jsonified_string = String::from(std::str::from_utf8(&data).unwrap());
+                let vel_config: TwistArray = serde_json::from_str(&jsonified_string).unwrap();
+
+                let mut data_vec: Vec<(u8, f32, f32)> = Vec::new();
+
+                for config in vel_config.twists.iter()
+                {
+                    // Get the id from hashmap
+                    let rhandler = robot_map.get(&config.id);
+                    match rhandler
+                    {
+                        Some(rhandler) => {
+                            data_vec.push((rhandler.id as u8, config.vel.0, config.vel.1));
+                        }
+                        None => {
+                            println!("Did not find the robot controller");
+                        }
+                    }
+                }
+
+                // Send the data over via the channel
+                tx.send(data_vec).await.unwrap();
             }
-            let data = vec![(0, 0.1, 0.5), (1, 0.2, -0.5), (2, -0.25, -0.25)];
-            tx.send(data).await.unwrap();
-
+            
             // sleep for a while
             sleep(Duration::from_millis(100));
         }
@@ -85,7 +110,7 @@ async fn main()
                 Ok(vel_commands) => {
                     for data in vel_commands.iter()
                     {
-                        let robot_handler = RobotHandler::new(data.0);
+                        let robot_handler = RobotHandler::new(data.0 as usize);
                         sim_handler.control(&robot_handler, (data.1, data.2));
                     }
                 }
