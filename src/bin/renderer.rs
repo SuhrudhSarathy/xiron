@@ -1,8 +1,6 @@
 
-use std::time::Duration;
+
 use xiron::prelude::*;
-use std::sync::{Arc, Mutex};
-use std::thread;
 
 #[macroquad::main(xiron)]
 async fn main()

@@ -14,6 +14,14 @@ pub struct RobotHandler {
     id: usize,
 }
 
+impl RobotHandler
+{
+    pub fn new(id: usize) -> RobotHandler
+    {
+        RobotHandler { id }
+    }
+}
+
 pub struct SimulationHandler {
     robots: Vec<Robot>,
     objects: Vec<Box<dyn Collidable>>,
@@ -30,7 +38,7 @@ impl SimulationHandler {
         };
     }
 
-    pub fn from_file(filepath: String) -> (SimulationHandler, Vec<RobotHandler>) {
+    pub fn from_file(filepath: String) -> (SimulationHandler, Vec<(String, RobotHandler)>) {
         let config = get_config_from_file(filepath);
 
         let mut sim_handle = SimulationHandler::new();
@@ -58,12 +66,13 @@ impl SimulationHandler {
         return (sim_handle, robot_handles);
     }
 
-    pub fn add_robot(&mut self, robot: Robot) -> RobotHandler {
+    pub fn add_robot(&mut self, robot: Robot) -> (String, RobotHandler) {
+        let name = robot.id.clone();
         self.robots.push(robot);
 
-        return RobotHandler {
+        return (name, RobotHandler {
             id: self.robots.len() - 1,
-        };
+        });
     }
 
     pub fn add_wall(&mut self, wall: Wall) {
