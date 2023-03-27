@@ -6,7 +6,7 @@ fn main()
     let context = zmq::Context::new();
     let subscriber = context.socket(zmq::SUB).unwrap();
 
-    subscriber.connect("tcp://localhost:5557").expect("Couldnt connect to Publisher");
+    subscriber.connect("tcp://localhost:8080").expect("Couldnt connect to Publisher");
     let subscription = format!("{:03}", 1).into_bytes();
     subscriber.set_subscribe(&subscription).unwrap();
     
