@@ -1,6 +1,6 @@
 /* This implements a Path Controller in Rust using a PD controller */
 
-use crate::object::handler::RobotHandler;
+use crate::handler::RobotHandler;
 use crate::utils::normalise;
 
 pub enum PathControllerState {

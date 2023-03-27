@@ -1,6 +1,7 @@
-use crate::object::{SimulationHandler, RobotHandler};
+use crate::handler::{SimulationHandler, RobotHandler};
 use super::sampler::{Sampler};
 
+#[allow(dead_code)]
 pub struct GraphBasedPlanner
 {
     sampler: Box<dyn Sampler>,
@@ -9,6 +10,7 @@ pub struct GraphBasedPlanner
     graph: f32,
 }
 
+#[allow(dead_code)]
 impl GraphBasedPlanner
 {
     pub fn GraphBasedPlanner(sampler: Box<dyn Sampler>, sim_handler: &'static SimulationHandler, robot_handler: &'static RobotHandler) -> GraphBasedPlanner

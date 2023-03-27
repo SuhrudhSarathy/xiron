@@ -1,8 +1,10 @@
+use macroquad::miniquad::conf;
 use macroquad::prelude::*;
 use parry2d::shape::Ball;
 
 use crate::behaviour::traits::Drawable;
 use crate::parameter::{DT, RESOLUTION};
+use crate::prelude::RobotConfig;
 use crate::prelude::traits::{Collidable, Sensable};
 use crate::utils::normalise;
 
@@ -67,6 +69,28 @@ impl Robot {
 
     pub fn sense(&self, collidables: &Vec<Box<dyn Collidable>>) -> LiDARMsg {
         return self.lidar[0].sense(collidables);
+    }
+
+    pub fn update_from_config(&mut self, config: &RobotConfig)
+    {
+        self.pose = config.pose;
+        
+        // Stepping will set the LiDar position also
+        self.step(&(self.pose.0, self.pose.1, self.pose.2));
+    }
+
+    pub fn into_config(&self)->RobotConfig 
+    {
+        let mut lidar = false;
+        if self.lidar.len() > 0 { lidar = true;}
+
+        RobotConfig
+        {
+            id: self.id.clone(),
+            pose: self.pose,
+            vel: self.vel,
+            lidar: lidar
+        }
     }
 }
 
