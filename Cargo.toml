@@ -19,7 +19,7 @@ serde_json = "1.0.94"
 name="world_editor"
 
 [[bin]]
-name="simulation"
+name="simulator"
 
 [[bin]]
 name="renderer"

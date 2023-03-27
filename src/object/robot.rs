@@ -1,4 +1,3 @@
-use macroquad::miniquad::conf;
 use macroquad::prelude::*;
 use parry2d::shape::Ball;
 

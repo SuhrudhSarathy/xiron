@@ -41,7 +41,7 @@ async fn main() {
         SimulationHandler::from_file("examples/keyboard_input/congif.yaml".to_owned());
 
     // Get the handler for a single robot
-    let robot0_handle = robot_handlers[0].clone();
+    let (_, robot0_handle) = robot_handlers[0].clone();
 
     // Make the mutex
     let simhandler_mutex = Arc::new(Mutex::new(sim_handler));

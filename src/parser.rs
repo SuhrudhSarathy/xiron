@@ -29,6 +29,33 @@ pub struct Config {
     pub static_objects: Vec<StaticObjConfig>,
 }
 
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Twist
+{
+    pub id: String,
+    pub vel: (f32, f32)
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct TwistArray
+{
+    pub twists: Vec<Twist>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct Position
+{
+    pub id: String, 
+    pub pose: (f32, f32, f32)
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct PositionArray
+{
+    pub positions: Vec<Position>,
+}
+
 pub fn get_config_from_file(path: String) -> Config {
     let file = std::fs::File::open(path).expect("File not openable");
     let config: Config =
