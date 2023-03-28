@@ -7,7 +7,7 @@ use xiron::prelude::{controller::PathController, *};
 async fn main() {
     let (mut sim_handler, robot_handlers) =
         SimulationHandler::from_file("examples/path_tracking/config.yaml".to_owned());
-    let robot0_handle = robot_handlers[0].clone();
+    let (_, robot0_handle) = robot_handlers[0].clone();
 
     let path = vec![
         (2.0, 0.0, 0.0),
