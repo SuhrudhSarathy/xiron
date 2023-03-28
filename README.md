@@ -16,6 +16,7 @@ git clone https://github.com/SuhrudhSarathy/xiron.git
 ```
 2. Use `cargo` to build
 ```
+cd xiron/
 cargo build --release
 ```
 
