@@ -17,6 +17,10 @@ git clone https://github.com/SuhrudhSarathy/xiron.git
 2. Use `cargo` to build
 ```
 cd xiron/
+cargo build
+```
+or
+```
 cargo build --release
 ```
 
@@ -42,7 +46,7 @@ cargo run --bin renderer /path/to/config
 ```bash
 cargo run --example websocket_client
 ```
-The client sends velocity commands to the server to command the robot to move in circles.
+The client sends velocity commands to the server to command the robot to move in circles. You can use the config file from [here](examples/websocket_client/config.yaml)
 
 ## Export Simulator and Renderer
 Since rust provides completely self-contained binaries, exporting the _simulator_ and _renderer_ binaries and running them standalone should work fine.
