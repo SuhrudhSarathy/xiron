@@ -55,6 +55,7 @@ async fn main()
         draw_text("W for wall", 25.0, 25.0, 20.0, GREEN);
         draw_text("O for object", 25.0, 50.0, 20.0, GREEN);
         draw_text("Right Click for robot", 25.0, 75.0, 20.0, GREEN);
+        draw_text("S for saving the config", 350.0, 25.0, 20.0, BLACK);
 
         match current_mode
         {
@@ -200,12 +201,12 @@ async fn main()
 
         for rect in static_obj.iter()
         {
-            draw_rectangle(rect.0, rect.1, rect.2-rect.0, rect.3-rect.1, DARKGRAY);
+            draw_rectangle(rect.0, rect.1, rect.2-rect.0, rect.3-rect.1, GRAY);
         }
 
         for robot in robots.iter()
         {
-            draw_circle(robot.0, robot.1, 10.0, GRAY);
+            draw_circle(robot.0, robot.1, 10.0, BLACK);
             draw_circle_lines(robot.0, robot.1, 10.0, 2.0, RED);
         }
         // println!("{:?}", current_mode);

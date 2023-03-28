@@ -1,15 +1,22 @@
 
-use std::time::Duration;
+use std::env;
 use xiron::prelude::*;
-use std::sync::{Arc, Mutex};
-use std::thread;
 
 #[macroquad::main(xiron)]
 async fn main()
 {
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 2
+    {
+        panic!("Pass the configuration file as an argument");
+    }
+    
+    let file_path = &args[1];
+
     let context = zmq::Context::new();
     let mut render_handler = RenderingHandler::new();
-    render_handler.from_file("./examples/path_tracking/config.yaml".to_owned());
+    render_handler.from_file(file_path.to_owned());
 
     let subscriber = context.socket(zmq::SUB).unwrap();
 
