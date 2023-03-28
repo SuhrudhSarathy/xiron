@@ -3,37 +3,87 @@ use std::thread::sleep;
 use std::time::Duration;
 use std::collections::HashMap;
 
+use tokio_tungstenite::tungstenite::Message;
 use tokio::sync::mpsc;
+use tokio_tungstenite::accept_async;
+use futures::{StreamExt, TryStreamExt};
+use futures_util::future;
+use tokio::net::{TcpListener, TcpStream};
+use std::net::SocketAddr;
+use std::sync::Arc;
+use std::env;
+
+
+async fn handle_connection(robot_map: Arc<HashMap<String, RobotHandler>>, tx: mpsc::UnboundedSender<Vec<(u8, f32, f32)>>, stream: TcpStream, addr: SocketAddr)
+{
+    let ws_stream = accept_async(stream).await.expect("Error during Handshake");
+
+    let (_, reader) = ws_stream.split();
+
+    let broadcast_incoming = reader.try_for_each(|msg|{
+        // Only handling if its a Text. Not handling otherwise.
+        match msg
+        {
+            Message::Text(message) => {
+                let vel_config: TwistArray= serde_json::from_str(&message).unwrap();
+                let mut twist_configs: Vec<(u8, f32, f32)> = Vec::with_capacity(vel_config.twists.len());
+
+                for twist in vel_config.twists.iter()
+                {
+                    let robot_handler = robot_map.get(&twist.id).unwrap();
+                    twist_configs.push((robot_handler.id as u8, twist.vel.0, twist.vel.1));
+                }
+
+                // send over the channel
+                tx.send(twist_configs).unwrap();
+            }
+
+            Message::Binary(_) => {}
+            Message::Ping(_) => {}
+            Message::Pong(_) => {}
+            Message::Close(_) => {
+                println!("Closing the connection with addr: {}", addr);
+            }
+            Message::Frame(_) => {}
+
+        }
+
+        // Process the message 
+        future::ok(())
+    });
+
+    let output = broadcast_incoming.await;
+
+    match output
+    {
+        Ok(_) => {}
+        Err(e) => {println!("Shutdown happened at addr: {} with error : {}", addr, e);}
+    }
+}
 
 #[tokio::main]
 async fn main()
 {
+    let args: Vec<String> = env::args().collect();
+
+    if args.len() < 2
+    {
+        panic!("Pass the configuration file as an argument");
+    }
+    
+    let file_path = &args[1];
+
     let context = zmq::Context::new();
     
     // Simulation publisher
     let publisher = context.socket(zmq::PUB).unwrap();
     publisher.bind("tcp://*:8080").expect("Could not bind publisher socket");
 
-    // Use this to check if we can connect to the control publisher
-    let mut controller_connected = false;
-
-    let controller = context.socket(zmq::SUB).unwrap();
-    match controller.connect("tcp://*:8081")
-    {
-        Ok(_) =>
-        {
-            let subscription = format!("{:03}", 1).into_bytes();
-            controller.set_subscribe(&subscription).unwrap();
-            println!("Connected to control publisher at tcp://localhost:8081");
-            controller_connected = true;
-        }
-        Err(e)=> {
-            println!("Could not connect to control publisher at tcp://localhost:8081. Will keep retrying");
-            println!("Error: {}", e);
-            controller_connected = false;}
-    }
+    // Create a websocket server to get the control inputs
+    let server = TcpListener::bind(&"localhost:8081").await.expect("Failed to bind to port localhost:8081");
+    println!("Controller Server connection activated at localhost:8081");
                 
-    let (mut sim_handler, robot_handlers) = SimulationHandler::from_file("./examples/path_tracking/config.yaml".to_owned());
+    let (mut sim_handler, robot_handlers) = SimulationHandler::from_file(file_path.to_owned());
     let mut robot_map: HashMap<String, RobotHandler> = HashMap::new();
 
     for (name, robot_handler) in robot_handlers
@@ -41,63 +91,18 @@ async fn main()
         robot_map.insert(name, robot_handler);
     }
 
+    let robot_map_arc = Arc::new(robot_map);
+
     // create the channel for recieving control commands
-    let (tx, mut rx) = mpsc::channel(100);
+    let (tx, mut rx) = mpsc::unbounded_channel();
 
-    let control_send_task = tokio::spawn(async move {
-        loop {
-
-            if !controller_connected
-            {
-                // Try connecting the socket until its online
-                match controller.connect("tcp://*:8081")
-                {
-                    Ok(_) => {
-                        controller_connected = true;
-                        let subscription = format!("{:03}", 1).into_bytes();
-                        controller.set_subscribe(&subscription).unwrap();
-                    }
-                    Err(e) => {
-                        controller_connected = false;
-                        println!("Error: {}", e);
-                    }
-                }
-            }
-            else {
-                // Get the control input from the socket
-                let topic = controller.recv_msg(1).unwrap();
-                println!("Got Data: {:?}", topic) ;
-                let data = controller.recv_msg(1).unwrap();
-
-                
-
-                // Convert the message to string
-                let jsonified_string = String::from(std::str::from_utf8(&data).unwrap());
-                let vel_config: TwistArray = serde_json::from_str(&jsonified_string).unwrap();
-
-                let mut data_vec: Vec<(u8, f32, f32)> = Vec::new();
-
-                for config in vel_config.twists.iter()
-                {
-                    // Get the id from hashmap
-                    let rhandler = robot_map.get(&config.id);
-                    match rhandler
-                    {
-                        Some(rhandler) => {
-                            data_vec.push((rhandler.id as u8, config.vel.0, config.vel.1));
-                        }
-                        None => {
-                            println!("Did not find the robot controller");
-                        }
-                    }
-                }
-
-                // Send the data over via the channel
-                tx.send(data_vec).await.unwrap();
-            }
+    let controller_task = tokio::spawn(async move
+    {
+        while let Ok((stream, addr)) = server.accept().await
+        {
+            println!("Got request from address: {:?}", addr);
+            tokio::spawn(handle_connection(robot_map_arc.clone(), tx.clone(), stream, addr));
             
-            // sleep for a while
-            sleep(Duration::from_millis(100));
         }
     });
     
@@ -132,7 +137,7 @@ async fn main()
         }
     });
 
-    control_send_task.await.unwrap();
+    controller_task.await.unwrap();
     simulator_task.await.unwrap();
 
 }
