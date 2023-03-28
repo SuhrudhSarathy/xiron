@@ -4,16 +4,6 @@ robots:
     vel: [0.0, 0.0]
     lidar: true
 
-  - id: robot1
-    pose: [0.0, 4.0, 0.0]
-    vel: [0.0, 0.0]
-    lidar: true
-
-  - id: robot2
-    pose: [0.0, -4.0, 0.0]
-    vel: [0.0, 0.0]
-    lidar: true
-
 walls:
   - endpoints:
     - [3.0, 1.0]
