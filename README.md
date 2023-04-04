@@ -9,6 +9,20 @@
 # Xiron
 A lightweight 2D robot simulator written in Rust.
 
+# Dependencies
+1. Install the Rust Programming language : https://www.rust-lang.org/tools/install
+2. Install Protobufs
+### Ubuntu
+```bash
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y protobuf-compiler libprotobuf-dev
+```
+### Mac
+Assuming [Homebrew](https://brew.sh) is already installed. (If not, see instructions for installing Homebrew on the Homebrew website.)
+```bash
+brew install protobuf
+```
+
 # Installation
 1. Clone the repository
 ```
@@ -29,7 +43,7 @@ There are multiple ways to use Xiron as a simulator. You can simulate your confi
 
 The simulator can also be run asynchronously with or without rendering. The [Simulator](src/bin/simulator.rs) updates the kinematics, performs collision checks etc. and the [Renderer](src/bin/renderer.rs) renders the scene asynchronously. This allows us to run the simulation in headless mode without having to render the scene.
 
-The __Simulator__ communicates with the __Renderer__ about the current scene using ZeroMQ messaging queue. The __Simulator__ exposes a websocket connection at port `localhost:8081` to send control inputs for the robot(s) present in the scene. A sample websocket client in Rust is implemented [here](examples/websocket_client). Websocket clients in Python, C++ will be available in the future.
+The __Simulator__ communicates with the __Renderer__ about the current scene using ZeroMQ messaging queue. The __Simulator__ implements gRPC server communication. The services `GetPose` and `SetVelocity` get the pose of a robot and set the velocity of the robot respectively. An example Rust gRPC client has been written as an example.
 
 ## Instructions
 1. Run the simulation server using cargo
@@ -44,12 +58,15 @@ cargo run --bin renderer /path/to/config
 
 3. Run the client
 ```bash
-cargo run --example websocket_client
+cargo run --example grpc_client
 ```
 The client sends velocity commands to the server to command the robot to move in circles. You can use the config file from [here](examples/websocket_client/config.yaml)
 
 ## Export Simulator and Renderer
 Since rust provides completely self-contained binaries, exporting the _simulator_ and _renderer_ binaries and running them standalone should work fine.
+
+# Bindings
+Since the simulation exposes gRPC services, it is easy to write clients in different languages. The bindings to the respective gRPC clients are in the [bindings](bindings) folder. The installation instructions are given in the particular folder of the bindings.
 
 # Examples
 Examples are in the [examples](examples) directory.
@@ -75,3 +92,7 @@ You can use the [World Editor](src/bin/world_editor.rs) to create a config file 
 
 # Roadmap
 The Roadmap is mentioned in the [Projects](https://github.com/SuhrudhSarathy/xiron/projects) section.
+
+# References
+1. Rust Language Reference: https://www.rust-lang.org
+2. gRPC: https://grpc.io
