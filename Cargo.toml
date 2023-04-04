@@ -31,7 +31,7 @@ name="simulator"
 name="renderer"
 
 [[example]]
-name="websocket_client"
+name="grpc_client"
 
 [[example]]
 name="path_tracking"
