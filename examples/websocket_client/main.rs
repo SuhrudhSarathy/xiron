@@ -1,46 +1,36 @@
-use tokio_tungstenite::connect_async;
-use futures::{SinkExt, StreamExt};
-use tokio_tungstenite::tungstenite::Message;
-use std::thread::sleep;
-use std::time::Duration;
+pub mod xiron_interfaces
+{
+    tonic::include_proto!("xiron_interfaces");
+}
 
-use xiron::prelude::*;
+use xiron_interfaces::{xiron_interface_client::XironInterfaceClient, VelocityRequest};
+use xiron_interfaces::PoseRequest;
+
 
 #[tokio::main]
-async fn main()
-{
-    // Address of the Webscoket server
-    let address = "ws://localhost:8081";
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut client = XironInterfaceClient::connect("http://[::1]:8081").await?;
 
-    // Connect to the Webscoket server
-    let (ws_stream, _) = connect_async(address).await.expect("Couldnt connect to the websocket");
+    // Get pose
+    let mut pose = client.get_pose(PoseRequest {id: "robot0".into()}).await?;
+    let pinto = pose.into_inner();
+    println!("{}, {}, {}", pinto.x, pinto.y, pinto.theta);
 
-    let (mut writer, _) = ws_stream.split();
-
-    // Construct the Twist Msg to send to Robot0
-    let vel1 = Twist{id: String::from("robot0"), vel: (0.3, 0.2)};
-
-    // Put it in the TwistArray container
-    let twist_array = TwistArray{twists: vec![vel1]};
-
-    // Send the velocity 10 times
-    for _ in 0..10
+    for i in 0..10
     {
-        let msg = twist_array.clone();
-        let msg_as_string = serde_json::to_string(&msg).unwrap();
-        writer.send(Message::Text(msg_as_string)).await.unwrap();
+        let response = client.set_velocity(VelocityRequest{
+            id: "robot0".into(),
+            v: i as f64 * 0.1,
+            w: 0.5
+        }).await?;
 
-        sleep(Duration::from_secs(2));
+        std::thread::sleep(std::time::Duration::from_millis(1000));
     }
-    
-    // Send Zero velocity to stop the Robot
-    let vel1 = Twist{id: String::from("robot0"), vel: (0.0, 0.0)};
-    
-    let twist_array = TwistArray{twists: vec![vel1]};
-    let msg_as_string = serde_json::to_string(&twist_array).unwrap();
-    
-    writer.send(Message::Text(msg_as_string)).await.unwrap();
 
-    // Close the websocket connection
-    writer.send(Message::Close(None)).await.unwrap();
+    pose = client.get_pose(PoseRequest {id: "robot0".into()}).await?;
+    let pinto = pose.into_inner();
+    println!("{}, {}, {}", pinto.x, pinto.y, pinto.theta);
+
+
+    Ok(())
 }
