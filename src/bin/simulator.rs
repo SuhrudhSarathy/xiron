@@ -1,68 +1,16 @@
+use tonic::transport::Server;
 use xiron::prelude::*;
 use std::thread::sleep;
 use std::time::Duration;
 use std::collections::HashMap;
-
-use tokio_tungstenite::tungstenite::Message;
-use tokio::sync::mpsc;
-use tokio_tungstenite::accept_async;
-use futures::{StreamExt, TryStreamExt};
-use futures_util::future;
-use tokio::net::{TcpListener, TcpStream};
-use std::net::SocketAddr;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex};
 use std::env;
 
+use tokio::sync::mpsc;
 
-async fn handle_connection(robot_map: Arc<HashMap<String, RobotHandler>>, tx: mpsc::UnboundedSender<Vec<(u8, f32, f32)>>, stream: TcpStream, addr: SocketAddr)
-{
-    let ws_stream = accept_async(stream).await.expect("Error during Handshake");
-
-    let (_, reader) = ws_stream.split();
-
-    let broadcast_incoming = reader.try_for_each(|msg|{
-        // Only handling if its a Text. Not handling otherwise.
-        match msg
-        {
-            Message::Text(message) => {
-                let vel_config: TwistArray= serde_json::from_str(&message).unwrap();
-                let mut twist_configs: Vec<(u8, f32, f32)> = Vec::with_capacity(vel_config.twists.len());
-
-                for twist in vel_config.twists.iter()
-                {
-                    let robot_handler = robot_map.get(&twist.id).unwrap();
-                    twist_configs.push((robot_handler.id as u8, twist.vel.0, twist.vel.1));
-                }
-
-                // send over the channel
-                tx.send(twist_configs).unwrap();
-            }
-
-            Message::Binary(_) => {}
-            Message::Ping(_) => {}
-            Message::Pong(_) => {}
-            Message::Close(_) => {
-                println!("Closing the connection with addr: {}", addr);
-            }
-            Message::Frame(_) => {}
-
-        }
-
-        // Process the message 
-        future::ok(())
-    });
-
-    let output = broadcast_incoming.await;
-
-    match output
-    {
-        Ok(_) => {}
-        Err(e) => {println!("Shutdown happened at addr: {} with error : {}", addr, e);}
-    }
-}
 
 #[tokio::main]
-async fn main()
+async fn main() -> Result<(), Box<dyn std::error::Error>> 
 {
     let args: Vec<String> = env::args().collect();
 
@@ -79,11 +27,13 @@ async fn main()
     let publisher = context.socket(zmq::PUB).unwrap();
     publisher.bind("tcp://*:8080").expect("Could not bind publisher socket");
 
-    // Create a websocket server to get the control inputs
-    let server = TcpListener::bind(&"localhost:8081").await.expect("Failed to bind to port localhost:8081");
-    println!("Controller Server connection activated at localhost:8081");
-                
-    let (mut sim_handler, robot_handlers) = SimulationHandler::from_file(file_path.to_owned());
+    let (sim_handler, robot_handlers) = SimulationHandler::from_file(file_path.to_owned());
+    
+    // Make Arc Mutex of Sim handler
+    let simh_loop = Arc::new(Mutex::new(sim_handler));
+    let simh_server = Arc::clone(&simh_loop);
+
+
     let mut robot_map: HashMap<String, RobotHandler> = HashMap::new();
 
     for (name, robot_handler) in robot_handlers
@@ -95,19 +45,13 @@ async fn main()
 
     // create the channel for recieving control commands
     let (tx, mut rx) = mpsc::unbounded_channel();
+    let addr = "[::1]:8081".parse()?;
+    let xserver = XironInterfaceServerImpl::new(simh_server, tx.clone(), robot_map_arc.clone());
 
-    let controller_task = tokio::spawn(async move
-    {
-        while let Ok((stream, addr)) = server.accept().await
-        {
-            println!("Got request from address: {:?}", addr);
-            tokio::spawn(handle_connection(robot_map_arc.clone(), tx.clone(), stream, addr));
-            
-        }
-    });
-    
     let simulator_task = tokio::spawn(async move {
+        println!("Started loop Task");
         loop {
+            let mut sim_handler = simh_loop.lock().unwrap();
             // recieve the data from sender
             let recieved_data = rx.try_recv();
 
@@ -133,11 +77,16 @@ async fn main()
                 .unwrap();
             publisher.send(&get_config_to_string(current_config), 1).unwrap();
 
-            sleep(Duration::from_millis(10));
+            drop(sim_handler);
+
+            sleep(Duration::from_millis((DT * 1000.0) as u64));
         }
     });
 
-    controller_task.await.unwrap();
+    println!("Starting Server");
+    Server::builder().add_service(XironInterfaceServer::new(xserver)).serve(addr).await?;
+    
     simulator_task.await.unwrap();
 
+    Ok(())
 }

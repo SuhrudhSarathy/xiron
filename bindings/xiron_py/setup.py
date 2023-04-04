@@ -12,7 +12,7 @@ setup(
     author_email="suhrudhsarathy@gmail.com",
     description="Python Bindings for xiron",
     license="MIT",
-    install_requires=["zmq"],
+    install_requires=["grpcio", "grpcio-tools"],
     packages=[
         project_name,
     ],

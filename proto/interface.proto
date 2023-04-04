@@ -1,0 +1,33 @@
+syntax = "proto3";
+
+package xiron_interfaces;
+
+service XironInterface
+{
+    rpc SetVelocity(VelocityRequest) returns (VelocityResponse);
+    rpc GetPose(PoseRequest) returns (PoseResponse);
+}
+
+message VelocityRequest
+{
+    string id = 1;
+    double v = 2;
+    double w = 3;
+}
+
+message VelocityResponse
+{
+    bool ack = 1;
+}
+
+message PoseRequest
+{
+    string id = 1;
+}
+
+message PoseResponse
+{
+    double x = 1;
+    double y = 2;
+    double theta = 3;
+}

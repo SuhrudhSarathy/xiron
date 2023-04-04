@@ -1,44 +1,45 @@
-from xiron_py.parser import *
-import zmq
+import grpc
+from xiron_py.interface_pb2 import VelocityRequest, PoseRequest
+from xiron_py.interface_pb2_grpc import XironInterfaceStub
+import threading
 
-class XironBinding:
-    def __init__(self, port, topic):
-        self.context = zmq.Context()
-        self.control_publisher = self.context.socket(zmq.PUB)
+from time import sleep
 
-        self.control_publisher.bind(port)
-        self.control_topic = topic
+class XironPythonInterface:
+    def __init__(self):
+        self.channel = grpc.insecure_channel("[::1]:8081")
+        self.stub = XironInterfaceStub(self.channel)
 
-        self.sensor_subscriber = self.context.socket(zmq.SUB)
+        self.threads = []
 
-    def publish_control(self, msg: TwistArray):
-        data_as_string = msg.to_json()
-        
-        if self.control_topic is not None:
-            self.control_publisher.send_string(str(self.control_topic))
-            self.control_publisher.send_string(data_as_string)
+    def set_velocity(self, robot_id, v, w):
+        self.stub.SetVelocity(VelocityRequest(id=robot_id, v=v, w=w))
 
-            print("Sent string")
+    def get_pose(self, robot_id):
+        pose = self.stub.GetPose(PoseRequest(id=robot_id))
 
+        return [pose.x, pose.y, pose.theta]
+    
+    def add_pose_subscriber(self, robot_id, callback, freq):
+        """Adds a subscriber callback to the given robot_id and loops at a frequency"""
+        def get_responses(robot_id, callback, timeout):
+            try:
+                while True:
+                    resp = self.stub.GetPose(PoseRequest(id=robot_id))
+                    callback([resp.x, resp.y, resp.theta])
 
+                    # Sleep for timeout
+                    sleep(1/freq)
+            except Exception as e:
+                print("Encountered Exception", e)
 
-    def add_sensor_subscriber(self, port, topic, callback_functions):
-        self.sensor_subscriber.connect(port)
+        sub_thread = threading.Thread(target=get_responses, args=(robot_id, callback, freq))
+        sub_thread.daemon = True
+        sub_thread.start()
 
-        # And register the callback function
+        self.threads.append(sub_thread)
 
+    def spin(self):
+        while True:
+            sleep(1)
 
-if __name__ == '__main__':
-    from time import sleep
-
-    bindings = XironBinding("tcp://*:8081", 1)
-    twist1 = Twist("robot0", (0.1, -0.5))
-    twist2 = Twist("robot1", (-0.1, 0.5))
-    twist3 = Twist("robot2", (0.2, 0.2))
-
-    twist_array = TwistArray([twist1, twist2, twist3])
-
-    while True:
-        bindings.publish_control(twist_array)
-
-        sleep(0.1)
