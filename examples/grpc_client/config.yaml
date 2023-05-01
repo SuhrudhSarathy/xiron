@@ -3,6 +3,7 @@ robots:
     pose: [0.0, 0.0, 0.0]
     vel: [0.0, 0.0]
     lidar: true
+    footprint: [0.5, 0.25]
 
 walls:
   - endpoints:

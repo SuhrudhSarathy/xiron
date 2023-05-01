@@ -20,6 +20,7 @@ pub struct RobotConfig {
     pub pose: (f32, f32, f32),
     pub vel: (f32, f32),
     pub lidar: bool,
+    pub footprint: Vec<f32>,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]

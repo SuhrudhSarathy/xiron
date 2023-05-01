@@ -29,7 +29,7 @@ pub trait Collidable {
             Ok(result) => match result {
                 None => false,
                 Some(dist) => {
-                    if dist.dist < self.get_max_extent() {
+                    if dist.dist < 0.1 {
                         return true;
                     } else {
                         return false;
