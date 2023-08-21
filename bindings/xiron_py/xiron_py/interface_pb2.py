@@ -13,7 +13,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0finterface.proto\x12\x10xiron_interfaces\"3\n\x0fVelocityRequest\x12\n\n\x02id\x18\x01 \x01(\t\x12\t\n\x01v\x18\x02 \x01(\x01\x12\t\n\x01w\x18\x03 \x01(\x01\"\x1f\n\x10VelocityResponse\x12\x0b\n\x03\x61\x63k\x18\x01 \x01(\x08\"\x19\n\x0bPoseRequest\x12\n\n\x02id\x18\x01 \x01(\t\"3\n\x0cPoseResponse\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\r\n\x05theta\x18\x03 \x01(\x01\x32\xb0\x01\n\x0eXironInterface\x12T\n\x0bSetVelocity\x12!.xiron_interfaces.VelocityRequest\x1a\".xiron_interfaces.VelocityResponse\x12H\n\x07GetPose\x12\x1d.xiron_interfaces.PoseRequest\x1a\x1e.xiron_interfaces.PoseResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x0finterface.proto\x12\x10xiron_interfaces\"3\n\x0fVelocityRequest\x12\n\n\x02id\x18\x01 \x01(\t\x12\t\n\x01v\x18\x02 \x01(\x01\x12\t\n\x01w\x18\x03 \x01(\x01\"\x1f\n\x10VelocityResponse\x12\x0b\n\x03\x61\x63k\x18\x01 \x01(\x08\"\x19\n\x0bPoseRequest\x12\n\n\x02id\x18\x01 \x01(\t\"3\n\x0cPoseResponse\x12\t\n\x01x\x18\x01 \x01(\x01\x12\t\n\x01y\x18\x02 \x01(\x01\x12\r\n\x05theta\x18\x03 \x01(\x01\"\x1a\n\x0cLidarRequest\x12\n\n\x02id\x18\x01 \x01(\t\"[\n\rLidarResponse\x12\x11\n\tmin_angle\x18\x01 \x01(\x01\x12\x11\n\tmax_angle\x18\x02 \x01(\x01\x12\x14\n\x0cnum_readings\x18\x03 \x01(\x05\x12\x0e\n\x06values\x18\x04 \x03(\x01\x32\x81\x02\n\x0eXironInterface\x12T\n\x0bSetVelocity\x12!.xiron_interfaces.VelocityRequest\x1a\".xiron_interfaces.VelocityResponse\x12H\n\x07GetPose\x12\x1d.xiron_interfaces.PoseRequest\x1a\x1e.xiron_interfaces.PoseResponse\x12O\n\x0cGetLidarScan\x12\x1e.xiron_interfaces.LidarRequest\x1a\x1f.xiron_interfaces.LidarResponseb\x06proto3')
 
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, globals())
 _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'interface_pb2', globals())
@@ -28,6 +28,10 @@ if _descriptor._USE_C_DESCRIPTORS == False:
   _POSEREQUEST._serialized_end=148
   _POSERESPONSE._serialized_start=150
   _POSERESPONSE._serialized_end=201
-  _XIRONINTERFACE._serialized_start=204
-  _XIRONINTERFACE._serialized_end=380
+  _LIDARREQUEST._serialized_start=203
+  _LIDARREQUEST._serialized_end=229
+  _LIDARRESPONSE._serialized_start=231
+  _LIDARRESPONSE._serialized_end=322
+  _XIRONINTERFACE._serialized_start=325
+  _XIRONINTERFACE._serialized_end=582
 # @@protoc_insertion_point(module_scope)
