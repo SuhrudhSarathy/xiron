@@ -15,15 +15,20 @@ class XironInterfaceStub(object):
             channel: A grpc.Channel.
         """
         self.SetVelocity = channel.unary_unary(
-                '/xiron_interfaces.XironInterface/SetVelocity',
-                request_serializer=interface__pb2.VelocityRequest.SerializeToString,
-                response_deserializer=interface__pb2.VelocityResponse.FromString,
-                )
+            "/xiron_interfaces.XironInterface/SetVelocity",
+            request_serializer=interface__pb2.VelocityRequest.SerializeToString,
+            response_deserializer=interface__pb2.VelocityResponse.FromString,
+        )
         self.GetPose = channel.unary_unary(
-                '/xiron_interfaces.XironInterface/GetPose',
-                request_serializer=interface__pb2.PoseRequest.SerializeToString,
-                response_deserializer=interface__pb2.PoseResponse.FromString,
-                )
+            "/xiron_interfaces.XironInterface/GetPose",
+            request_serializer=interface__pb2.PoseRequest.SerializeToString,
+            response_deserializer=interface__pb2.PoseResponse.FromString,
+        )
+        self.GetLidarScan = channel.unary_unary(
+            "/xiron_interfaces.XironInterface/GetLidarScan",
+            request_serializer=interface__pb2.LidarRequest.SerializeToString,
+            response_deserializer=interface__pb2.LidarResponse.FromString,
+        )
 
 
 class XironInterfaceServicer(object):
@@ -32,68 +37,133 @@ class XironInterfaceServicer(object):
     def SetVelocity(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
     def GetPose(self, request, context):
         """Missing associated documentation comment in .proto file."""
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
-        context.set_details('Method not implemented!')
-        raise NotImplementedError('Method not implemented!')
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
+
+    def GetLidarScan(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details("Method not implemented!")
+        raise NotImplementedError("Method not implemented!")
 
 
 def add_XironInterfaceServicer_to_server(servicer, server):
     rpc_method_handlers = {
-            'SetVelocity': grpc.unary_unary_rpc_method_handler(
-                    servicer.SetVelocity,
-                    request_deserializer=interface__pb2.VelocityRequest.FromString,
-                    response_serializer=interface__pb2.VelocityResponse.SerializeToString,
-            ),
-            'GetPose': grpc.unary_unary_rpc_method_handler(
-                    servicer.GetPose,
-                    request_deserializer=interface__pb2.PoseRequest.FromString,
-                    response_serializer=interface__pb2.PoseResponse.SerializeToString,
-            ),
+        "SetVelocity": grpc.unary_unary_rpc_method_handler(
+            servicer.SetVelocity,
+            request_deserializer=interface__pb2.VelocityRequest.FromString,
+            response_serializer=interface__pb2.VelocityResponse.SerializeToString,
+        ),
+        "GetPose": grpc.unary_unary_rpc_method_handler(
+            servicer.GetPose,
+            request_deserializer=interface__pb2.PoseRequest.FromString,
+            response_serializer=interface__pb2.PoseResponse.SerializeToString,
+        ),
+        "GetLidarScan": grpc.unary_unary_rpc_method_handler(
+            servicer.GetLidarScan,
+            request_deserializer=interface__pb2.LidarRequest.FromString,
+            response_serializer=interface__pb2.LidarResponse.SerializeToString,
+        ),
     }
     generic_handler = grpc.method_handlers_generic_handler(
-            'xiron_interfaces.XironInterface', rpc_method_handlers)
+        "xiron_interfaces.XironInterface", rpc_method_handlers
+    )
     server.add_generic_rpc_handlers((generic_handler,))
 
 
- # This class is part of an EXPERIMENTAL API.
+# This class is part of an EXPERIMENTAL API.
 class XironInterface(object):
     """Missing associated documentation comment in .proto file."""
 
     @staticmethod
-    def SetVelocity(request,
+    def SetVelocity(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/xiron_interfaces.XironInterface/SetVelocity',
+            "/xiron_interfaces.XironInterface/SetVelocity",
             interface__pb2.VelocityRequest.SerializeToString,
             interface__pb2.VelocityResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
 
     @staticmethod
-    def GetPose(request,
+    def GetPose(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
             target,
-            options=(),
-            channel_credentials=None,
-            call_credentials=None,
-            insecure=False,
-            compression=None,
-            wait_for_ready=None,
-            timeout=None,
-            metadata=None):
-        return grpc.experimental.unary_unary(request, target, '/xiron_interfaces.XironInterface/GetPose',
+            "/xiron_interfaces.XironInterface/GetPose",
             interface__pb2.PoseRequest.SerializeToString,
             interface__pb2.PoseResponse.FromString,
-            options, channel_credentials,
-            insecure, call_credentials, compression, wait_for_ready, timeout, metadata)
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
+
+    @staticmethod
+    def GetLidarScan(
+        request,
+        target,
+        options=(),
+        channel_credentials=None,
+        call_credentials=None,
+        insecure=False,
+        compression=None,
+        wait_for_ready=None,
+        timeout=None,
+        metadata=None,
+    ):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            "/xiron_interfaces.XironInterface/GetLidarScan",
+            interface__pb2.LidarRequest.SerializeToString,
+            interface__pb2.LidarResponse.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+        )
