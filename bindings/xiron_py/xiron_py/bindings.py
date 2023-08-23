@@ -17,12 +17,18 @@ class XironPythonInterface:
         self.stub.SetVelocity(VelocityRequest(id=robot_id, v=v, w=w))
 
     def get_pose(self, robot_id):
-        pose = self.stub.GetPose(PoseRequest(id=robot_id))
-
-        return [pose.x, pose.y, pose.theta]
+        try:
+            pose = self.stub.GetPose(PoseRequest(id=robot_id))
+            return [pose.x, pose.y, pose.theta]
+        except Exception as e:
+            print("Encountered exception", e)
 
     def get_lidar_scan(self, robot_id):
-        self.stub.GetLidarScan(LidarRequest(id=robot_id))
+        try:
+            resp = self.stub.GetLidarScan(LidarRequest(id=robot_id))
+            return [resp.min_angle, resp.max_angle, resp.num_readings, resp.values]
+        except Exception as e:
+            print("Encountered exception", e)
 
     def add_lidar_subscriber(self, robot_id, callback, freq):
         """Adds a subscriber callback to the given robot_id and loops at a frequency"""
@@ -32,7 +38,7 @@ class XironPythonInterface:
                 while True:
                     resp = self.stub.GetLidarScan(LidarRequest(id=robot_id))
                     callback(
-                        [resp.min_angle, resp.max_angle, resp.num_readings, resp.valus]
+                        [resp.min_angle, resp.max_angle, resp.num_readings, resp.values]
                     )
 
                     # Sleep for timeout
