@@ -41,6 +41,10 @@ def pose_callback_funtion(msg):
     # Do something
     print(msg)
 
+def lidar_callback_funtion(msg):
+    # Do something
+    print(msg)
+
 if __name__ == '__main__':
 
     # Create an object
@@ -51,6 +55,7 @@ if __name__ == '__main__':
 
     # Add subscriber to the Pose
     xip.add_pose_subscriber("robot0", pose_callback_funtion, 10)
+    xip.add_lidar_subscriber("robot0", lidar_callback_funtion, 10)
 
     # Spin so that the thread is alive
     xip.spin()
