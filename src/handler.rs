@@ -51,6 +51,7 @@ impl SimulationHandler {
                 robot.pose,
                 robot.vel,
                 robot.lidar,
+                robot.footprint.clone(),
             ));
             robot_handles.push(handle);
         }
@@ -230,6 +231,7 @@ impl RenderingHandler
                 robot.pose,
                 robot.vel,
                 robot.lidar,
+                robot.footprint.clone(),
             ));
         }
 

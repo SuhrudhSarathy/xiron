@@ -232,6 +232,7 @@ async fn main()
                     id: "robot".to_owned() + &i.to_string(),
                     vel: (0.0, 0.0),
                     lidar: true,
+                    footprint: vec![0.5],
                 };
 
                 robot_configs.push(rc);

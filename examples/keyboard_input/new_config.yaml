@@ -8,6 +8,7 @@ robots:
   - 0.0
   - 0.0
   lidar: true
+  footprint: [1.5, 1.5]
 walls:
 - endpoints:
   - - -10.407227

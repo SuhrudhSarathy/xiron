@@ -7,7 +7,8 @@ fn check_jsonifying_from_config()
         id: "robot0".to_string(),
         pose: (0.0, 0.0, 0.0),
         vel: (0.0, 0.0),
-        lidar: false
+        lidar: false,
+        footprint: vec![0.5],
     };
 
     let config = Config{
