@@ -4,7 +4,7 @@ use xiron::prelude::*;
 #[macroquad::main(xiron)]
 async fn main() {
     let mut config_file_path: String = "".to_owned();
-    let mut host_ip = "localhost".to_owned();
+    let mut host_ip = "127.0.0.1:8081".to_owned();
 
     // this block limits scope of borrows by ap.refer() method as mutable reference is used
     {
@@ -34,7 +34,7 @@ async fn main() {
     let subscriber = context.socket(zmq::SUB).unwrap();
 
     subscriber
-        .connect(format!("tcp://{}:8080", host_ip).as_str())
+        .connect("tcp://localhost:8080")
         .expect("Couldnt connect to Publisher");
     let subscription = format!("{:03}", 1).into_bytes();
     subscriber.set_subscribe(&subscription).unwrap();

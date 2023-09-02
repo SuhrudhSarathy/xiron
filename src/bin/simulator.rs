@@ -14,7 +14,7 @@ use tokio::sync::mpsc;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let mut config_file_path: String = "".to_owned();
-    let mut host_ip = "127.0.0.1:50051".to_owned();
+    let mut host_ip = "[::1]:50051".to_owned();
 
     // this block limits scope of borrows by ap.refer() method as mutable reference is used
     {
@@ -64,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // create the channel for recieving control commands
     let (tx, mut rx) = mpsc::unbounded_channel();
-    let addr = host_ip.parse()?;
+    let addr = "[::1]:8081".parse().unwrap();
     let xserver = XironInterfaceServerImpl::new(simh_server, tx.clone(), robot_map_arc.clone());
 
     let simulator_task = tokio::spawn(async move {
@@ -99,7 +99,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         }
     });
 
-    println!("Starting Server");
+    println!("Starting Server: {addr}");
     Server::builder()
         .add_service(XironInterfaceServer::new(xserver))
         .serve(addr)

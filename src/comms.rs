@@ -10,7 +10,8 @@ pub mod xiron_interfaces {
 
 pub use xiron_interfaces::xiron_interface_server::{XironInterface, XironInterfaceServer};
 pub use xiron_interfaces::{
-    LidarRequest, LidarResponse, PoseRequest, PoseResponse, VelocityRequest, VelocityResponse,
+    EmptyRequest, EmptyResponse, LidarRequest, LidarResponse, PoseRequest, PoseResponse,
+    VelocityRequest, VelocityResponse,
 };
 
 use tokio::sync::mpsc::UnboundedSender;
@@ -117,6 +118,17 @@ impl XironInterface for XironInterfaceServerImpl {
             num_readings: lidar_msg.num_readings.clone() as i32,
             values: vals,
         };
+        Ok(Response::new(resp))
+    }
+
+    async fn reset_env(
+        &self,
+        _request: Request<EmptyRequest>,
+    ) -> Result<Response<EmptyResponse>, Status> {
+        let mut sh = self.sim_handler.lock().unwrap();
+        sh.reset();
+        let resp = EmptyResponse {};
+
         Ok(Response::new(resp))
     }
 }
