@@ -1,43 +1,62 @@
-use tonic::transport::Server;
-use xiron::prelude::*;
-use std::thread::sleep;
-use std::time::Duration;
+extern crate argparse;
+
 use std::collections::HashMap;
 use std::sync::{Arc, Mutex};
-use std::env;
+use std::thread::sleep;
+use std::time::Duration;
+use tonic::transport::Server;
+use xiron::prelude::*;
+
+use argparse::{ArgumentParser, Store};
 
 use tokio::sync::mpsc;
 
-
 #[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> 
-{
-    let args: Vec<String> = env::args().collect();
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let mut config_file_path: String = "".to_owned();
+    let mut host_ip = "127.0.0.1:50051".to_owned();
 
-    if args.len() < 2
+    // this block limits scope of borrows by ap.refer() method as mutable reference is used
     {
-        panic!("Pass the configuration file as an argument");
+        let mut ap = ArgumentParser::new();
+        ap.set_description("Run Xiron Simulator.");
+        ap.refer(&mut config_file_path).add_option(
+            &["-c", "--config"],
+            Store,
+            "Path to Config file",
+        );
+        ap.refer(&mut host_ip).add_option(
+            &["-h", "--name"],
+            Store,
+            "IP of the host. By default, it is set to localhost",
+        );
+        ap.parse_args_or_exit();
     }
-    
-    let file_path = &args[1];
 
+    if &config_file_path.to_string() == "" {
+        !panic!("Configuration file cannot be empty");
+    }
+
+    // ZMQ context
     let context = zmq::Context::new();
-    
+
     // Simulation publisher
     let publisher = context.socket(zmq::PUB).unwrap();
-    publisher.bind("tcp://*:8080").expect("Could not bind publisher socket");
+    publisher
+        .bind("tcp://*:8080")
+        .expect("Could not bind publisher socket");
 
-    let (sim_handler, robot_handlers) = SimulationHandler::from_file(file_path.to_owned());
-    
+    let (sim_handler, robot_handlers) = SimulationHandler::from_file(config_file_path.to_owned());
+
     // Make Arc Mutex of Sim handler
+    // One of them is required for to serve the gRPC server and the other to step the simulation
     let simh_loop = Arc::new(Mutex::new(sim_handler));
-    let simh_server = Arc::clone(&simh_loop);
 
+    let simh_server = Arc::clone(&simh_loop);
 
     let mut robot_map: HashMap<String, RobotHandler> = HashMap::new();
 
-    for (name, robot_handler) in robot_handlers
-    {
+    for (name, robot_handler) in robot_handlers {
         robot_map.insert(name, robot_handler);
     }
 
@@ -45,7 +64,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>
 
     // create the channel for recieving control commands
     let (tx, mut rx) = mpsc::unbounded_channel();
-    let addr = "[::1]:8081".parse()?;
+    let addr = host_ip.parse()?;
     let xserver = XironInterfaceServerImpl::new(simh_server, tx.clone(), robot_map_arc.clone());
 
     let simulator_task = tokio::spawn(async move {
@@ -57,25 +76,22 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>
 
             match recieved_data {
                 Ok(vel_commands) => {
-                    for data in vel_commands.iter()
-                    {
+                    for data in vel_commands.iter() {
                         let robot_handler = RobotHandler::new(data.0 as usize);
                         sim_handler.control(&robot_handler, (data.1, data.2));
                     }
                 }
-                Err(_) =>
-                {
-                }
+                Err(_) => {}
             }
 
             sim_handler.step();
             let current_config = sim_handler.to_config();
 
             // Send out the data for the renderer
+            publisher.send(&format!("{:03}", 1), zmq::SNDMORE).unwrap();
             publisher
-                .send(&format!("{:03}", 1), zmq::SNDMORE)
+                .send(&get_config_to_string(current_config), 1)
                 .unwrap();
-            publisher.send(&get_config_to_string(current_config), 1).unwrap();
 
             drop(sim_handler);
 
@@ -84,8 +100,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>>
     });
 
     println!("Starting Server");
-    Server::builder().add_service(XironInterfaceServer::new(xserver)).serve(addr).await?;
-    
+    Server::builder()
+        .add_service(XironInterfaceServer::new(xserver))
+        .serve(addr)
+        .await?;
+
     simulator_task.await.unwrap();
 
     Ok(())
