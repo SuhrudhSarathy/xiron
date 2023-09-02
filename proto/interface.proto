@@ -7,6 +7,7 @@ service XironInterface
     rpc SetVelocity(VelocityRequest) returns (VelocityResponse);
     rpc GetPose(PoseRequest) returns (PoseResponse);
     rpc GetLidarScan(LidarRequest) returns (LidarResponse);
+    rpc ResetEnv(EmptyRequest) returns (EmptyResponse);
 }
 
 message VelocityRequest
@@ -45,3 +46,9 @@ message LidarResponse
     int32 num_readings = 3;
     repeated double values = 4;
 }
+
+message EmptyRequest
+{}
+
+message EmptyResponse 
+{}
