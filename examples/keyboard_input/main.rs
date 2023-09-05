@@ -19,15 +19,15 @@ async fn main() {
         let mut vel = (0.0, 0.0);
 
         if input::is_key_down(KeyCode::Left) {
-            vel.1 = 0.5;
+            vel.1 = 1.0;
         } else if input::is_key_down(KeyCode::Right) {
-            vel.1 = -0.5;
+            vel.1 = -1.0;
         }
 
         if input::is_key_down(KeyCode::Up) {
-            vel.0 = 0.5;
+            vel.0 = 1.0;
         } else if input::is_key_down(KeyCode::Down) {
-            vel.0 = -0.5;
+            vel.0 = -1.0;
         }
         sim_handler.control(&robot0_handle, vel);
 

@@ -26,7 +26,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             "Path to Config file",
         );
         ap.refer(&mut host_ip).add_option(
-            &["-h", "--name"],
+            &["-i", "--ip"],
             Store,
             "IP of the host. By default, it is set to localhost",
         );

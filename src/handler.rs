@@ -1,5 +1,8 @@
 use std::iter::zip;
 
+use egui_macroquad::egui::*;
+use macroquad::prelude::*;
+
 use crate::behaviour::traits::{Collidable, Drawable};
 use crate::object::robot::Robot;
 use crate::object::sensors::LiDARMsg;
@@ -192,6 +195,14 @@ impl SimulationHandler {
     }
 
     pub fn draw(&self) {
+        for x in (1..WIDTH as i32).step_by((1.0 / RESOLUTION) as usize) {
+            draw_line(x as f32, 0.0, x as f32, HEIGHT, 1.0, LIGHTGRAY)
+        }
+
+        for y in (1..HEIGHT as i32).step_by((1.0 / RESOLUTION) as usize) {
+            draw_line(0.0 as f32, y as f32, WIDTH, y as f32, 1.0, LIGHTGRAY)
+        }
+
         for robot in self.robots.iter() {
             robot.draw(Self::tf_function);
         }
@@ -271,6 +282,15 @@ impl RenderingHandler {
     }
 
     pub fn draw(&self) {
+        // Draw vertical lines throughout the location
+        for x in (1..WIDTH as i32).step_by((1.0 / RESOLUTION) as usize) {
+            draw_line(x as f32, 0.0, x as f32, HEIGHT, 1.0, LIGHTGRAY)
+        }
+
+        for y in (1..HEIGHT as i32).step_by((1.0 / RESOLUTION) as usize) {
+            draw_line(0.0 as f32, y as f32, WIDTH, y as f32, 1.0, LIGHTGRAY)
+        }
+
         for robot in self.robots.iter() {
             robot.draw(Self::tf_function);
         }
@@ -280,11 +300,35 @@ impl RenderingHandler {
         }
     }
 
+    pub fn draw_equi_comps(&self) {
+        egui_macroquad::ui(|egui_ctx| {
+            Window::new("Robot Information").show(egui_ctx, |ui| {
+                for robot in self.robots.iter() {
+                    ui.label(format!("Robot: {}", robot.id.to_owned()));
+                    ui.label(format!(
+                        "Pose: {x}, {y}, {t}",
+                        x = robot.pose.0,
+                        y = robot.pose.1,
+                        t = robot.pose.2
+                    ));
+                }
+            });
+        });
+
+        // Draw things before egui
+
+        egui_macroquad::draw();
+    }
+
     pub fn render(&mut self, data: &zmq::Message) {
         let config = get_config_from_string(String::from(std::str::from_utf8(&data).unwrap()));
 
         self.from_config(&config);
 
         self.draw();
+
+        self.draw_equi_comps();
+
+        // Draw Egui stuff here
     }
 }
