@@ -27,6 +27,9 @@ pub struct SimulationHandler {
     objects: Vec<Box<dyn Collidable>>,
     artists: Vec<Box<dyn Drawable>>,
 
+    walls: Vec<Wall>,
+    static_objects: Vec<StaticObj>,
+
     filepath: String,
 }
 
@@ -36,6 +39,9 @@ impl SimulationHandler {
             robots: Vec::new(),
             objects: Vec::new(),
             artists: Vec::new(),
+
+            walls: Vec::new(),
+            static_objects: Vec::new(),
             filepath: "".to_string(),
         };
     }
@@ -70,13 +76,17 @@ impl SimulationHandler {
 
         return (sim_handle, robot_handles);
     }
-
     pub fn load_file_path(&mut self, path: String) {
         self.filepath = path.clone();
     }
 
     pub fn reset(&mut self) {
         self.robots.clear();
+        self.objects.clear();
+        self.artists.clear();
+
+        self.walls.clear();
+        self.static_objects.clear();
 
         let config = get_config_from_file(self.filepath.to_owned());
         for robot in config.robots.iter() {
@@ -87,6 +97,14 @@ impl SimulationHandler {
                 robot.lidar,
                 robot.footprint.clone(),
             ));
+        }
+
+        for wall in config.walls.iter() {
+            self.add_wall(Wall::new(wall.endpoints.clone()));
+        }
+
+        for obj in config.static_objects.iter() {
+            self.add_static_obj(StaticObj::new(obj.center, obj.width, obj.height));
         }
     }
 
@@ -105,11 +123,15 @@ impl SimulationHandler {
     pub fn add_wall(&mut self, wall: Wall) {
         self.objects.push(Box::new(wall.clone()));
         self.artists.push(Box::new(wall.clone()));
+
+        self.walls.push(wall.clone());
     }
 
     pub fn add_static_obj(&mut self, obj: StaticObj) {
         self.objects.push(Box::new(obj.clone()));
         self.artists.push(Box::new(obj.clone()));
+
+        self.static_objects.push(obj.clone());
     }
 
     pub fn control(&mut self, robot: &RobotHandler, control: (f32, f32)) {
@@ -187,10 +209,28 @@ impl SimulationHandler {
             robot_config_vectors.push(robot.into_config());
         }
 
+        let mut wall_config_vector: Vec<WallConfig> = Vec::new();
+
+        for wall in self.walls.iter() {
+            wall_config_vector.push(WallConfig {
+                endpoints: wall.coords.clone(),
+            });
+        }
+
+        let mut static_objects_config: Vec<StaticObjConfig> = Vec::new();
+
+        for obj in self.static_objects.iter() {
+            static_objects_config.push(StaticObjConfig {
+                center: obj.center.clone(),
+                width: obj.width,
+                height: obj.height,
+            });
+        }
+
         Config {
             robots: robot_config_vectors,
-            walls: Vec::new(),
-            static_objects: Vec::new(),
+            walls: wall_config_vector,
+            static_objects: static_objects_config,
         }
     }
 
