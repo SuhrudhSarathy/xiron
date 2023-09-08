@@ -235,12 +235,19 @@ impl SimulationHandler {
     }
 
     pub fn draw(&self) {
-        for x in (1..WIDTH as i32).step_by((1.0 / RESOLUTION) as usize) {
-            draw_line(x as f32, 0.0, x as f32, HEIGHT, 1.0, LIGHTGRAY)
+        for x in (1..screen_width() as i32).step_by((1.0 / RESOLUTION) as usize) {
+            draw_line(x as f32, 0.0, x as f32, screen_height(), 1.0, LIGHTGRAY)
         }
 
-        for y in (1..HEIGHT as i32).step_by((1.0 / RESOLUTION) as usize) {
-            draw_line(0.0 as f32, y as f32, WIDTH, y as f32, 1.0, LIGHTGRAY)
+        for y in (1..screen_height() as i32).step_by((1.0 / RESOLUTION) as usize) {
+            draw_line(
+                0.0 as f32,
+                y as f32,
+                screen_width(),
+                y as f32,
+                1.0,
+                LIGHTGRAY,
+            )
         }
 
         for robot in self.robots.iter() {

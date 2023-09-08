@@ -1,4 +1,5 @@
 use egui_macroquad::egui::{self, panel::Side, Button, ImageButton, SidePanel, TopBottomPanel};
+use egui_macroquad::egui::{Context, Visuals};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
@@ -65,22 +66,28 @@ impl EguiInterface {
     }
 
     fn show_elements(&mut self, ctx: &egui::Context) {
-        TopBottomPanel::top("FileEditViewBar").show(ctx, |ui| self.draw_file_top_bar(ui));
+        TopBottomPanel::top("FileEditViewBar").show(ctx, |ui| self.draw_file_top_bar(ctx, ui));
         TopBottomPanel::top("MainTopBar").show(ctx, |ui| self.draw_top_bar_elements(ui));
-        TopBottomPanel::bottom("Play-Pause Button").show(ctx, |ui| self.handle_play_pause(ui));
+        TopBottomPanel::bottom("Play-Pause Button").show(ctx, |ui| self.handle_bottom_bar(ui));
 
         // draw stuff
-        self.deal_with_object_clicks();
+        self.add_objects_from_top_bar();
 
         // Deal with clicks on Objects
         self.deal_with_click_on_objects(ctx);
     }
 
-    fn draw_file_top_bar(&mut self, ui: &mut egui::Ui) {
+    fn draw_file_top_bar(&mut self, ctx: &Context, ui: &mut egui::Ui) {
         egui::menu::bar(ui, |ui| {
             ui.menu_button("File", |ui| {
                 let save_config_button = ui.button("Save Config");
                 let open_config_button = ui.button("Open Config");
+                ui.separator();
+                let close_button = ui.button("Close Simulator");
+
+                if close_button.clicked() {
+                    std::process::exit(0);
+                }
 
                 if save_config_button.clicked() {
                     // Spawn dialog on main thread
@@ -131,7 +138,19 @@ impl EguiInterface {
                         }
                     });
                 }
-            })
+            });
+            ui.menu_button("View", |ui| {
+                let light_mode_button = ui.button("Toggle Mode");
+
+                if light_mode_button.clicked() {
+                    let visuals = if ui.visuals().dark_mode {
+                        Visuals::light()
+                    } else {
+                        Visuals::dark()
+                    };
+                    ctx.set_visuals(visuals);
+                }
+            });
         });
     }
 
@@ -150,7 +169,7 @@ impl EguiInterface {
         });
     }
 
-    fn deal_with_object_clicks(&mut self) {
+    fn add_objects_from_top_bar(&mut self) {
         let (mx, my) = mouse_position();
 
         if self.clicked_mode == Mode::Circle {
@@ -223,22 +242,40 @@ impl EguiInterface {
         }
     }
 
-    fn handle_play_pause(&mut self, ui: &mut egui::Ui) {
-        match self.play {
-            PlayMode::Pause => {
-                let button = ui.add(Button::new("Play |>"));
-                if button.clicked() {
-                    self.play = PlayMode::Play;
-                }
-            }
+    fn handle_bottom_bar(&mut self, ui: &mut egui::Ui) {
+        ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
+            ui.with_layout(
+                egui::Layout::left_to_right(egui::Align::TOP),
+                |ui| match self.play {
+                    PlayMode::Pause => {
+                        let button = ui.add(Button::new("Play ▶"));
+                        if button.clicked() {
+                            self.play = PlayMode::Play;
+                        }
+                    }
 
-            PlayMode::Play => {
-                let button = ui.add(Button::new("Pause ||"));
-                if button.clicked() {
-                    self.play = PlayMode::Pause;
-                }
-            }
-        }
+                    PlayMode::Play => {
+                        let button = ui.add(Button::new("Pause ⏸"));
+                        if button.clicked() {
+                            self.play = PlayMode::Pause;
+                        }
+                    }
+                },
+            );
+            ui.with_layout(
+                egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
+                |ui| {
+                    ui.label(format!("Made with {} by Suhrudh", "♡"));
+                },
+            );
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+                ui.label(format!("FPS: {}", get_fps()));
+                ui.separator();
+                ui.label(format!("Elapsed Time: {:.3}s", get_time()));
+            });
+        });
+
+        // Put text on the left about the current FPS
     }
 }
 
