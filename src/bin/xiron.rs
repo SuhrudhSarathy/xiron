@@ -1,10 +1,24 @@
-use egui_macroquad::egui::{self, panel::Side, Button, ImageButton, SidePanel, TopBottomPanel};
+use egui_macroquad::egui::{
+    self, Button, Layout, RichText, SidePanel, TextBuffer, TopBottomPanel, Window,
+};
 use egui_macroquad::egui::{Context, Visuals};
 use macroquad::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::future::Future;
-use std::sync::mpsc::{Receiver, Sender};
+use std::sync::mpsc::Sender;
 use xiron::prelude::*;
+
+trait Object {
+    fn modify_bounds(&mut self, width: f32, height: f32);
+    fn modify_rotation(&mut self, angle: f32);
+    fn modify_position(&mut self, x: f32, y: f32);
+
+    fn draw(&self);
+
+    fn get_center(&self) -> (f32, f32);
+    fn get_rotation(&self) -> f32;
+    fn get_bounds(&self) -> (f32, f32);
+}
 
 #[derive(Deserialize, Serialize)]
 struct VelocityQuery {
@@ -18,15 +32,125 @@ struct PoseQuery {
     pose: (f32, f32, f32),
 }
 
-fn send_data(publisher: &zmq::Socket) {
-    let vel = VelocityQuery {
-        robot_id: "robot0".to_string(),
-        velocity: (0.1, 0.1),
-    };
-    let vel_as_string = serde_json::to_string(&vel).expect("Could not convert");
+#[derive(Debug, PartialEq, Clone, Copy)]
+struct CircleObj {
+    pub radius: f32,
+    pub center: (f32, f32),
+}
 
-    publisher.send(&format!("{}", 10011), zmq::SNDMORE).unwrap();
-    publisher.send(&vel_as_string.to_owned(), 0).unwrap();
+impl CircleObj {
+    pub fn new(radius: f32, center: (f32, f32)) -> Self {
+        Self {
+            radius: radius,
+            center: center,
+        }
+    }
+}
+
+impl Object for CircleObj {
+    fn modify_bounds(&mut self, width: f32, _height: f32) {
+        self.radius = width;
+    }
+    fn modify_position(&mut self, x: f32, y: f32) {
+        self.center = (x, y);
+    }
+    fn modify_rotation(&mut self, _angle: f32) {}
+
+    fn draw(&self) {
+        draw_circle(self.center.0, self.center.1, self.radius, RED);
+    }
+
+    fn get_center(&self) -> (f32, f32) {
+        (self.center.0, self.center.1)
+    }
+
+    fn get_rotation(&self) -> f32 {
+        0.0
+    }
+
+    fn get_bounds(&self) -> (f32, f32) {
+        (self.radius, self.radius)
+    }
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+struct RectangleObj {
+    pub width: f32,
+    pub height: f32,
+    pub center: (f32, f32),
+    pub rotation_angle: f32,
+}
+
+impl RectangleObj {
+    pub fn new(width: f32, height: f32, center: (f32, f32)) -> Self {
+        Self {
+            width: width,
+            height: height,
+            center: center,
+            rotation_angle: 0.0,
+        }
+    }
+}
+
+impl Object for RectangleObj {
+    fn modify_bounds(&mut self, width: f32, height: f32) {
+        self.width = width;
+        self.height = height;
+    }
+
+    fn modify_position(&mut self, x: f32, y: f32) {
+        self.center = (x, y);
+    }
+
+    fn modify_rotation(&mut self, angle: f32) {
+        self.rotation_angle = angle;
+    }
+
+    fn draw(&self) {
+        let w = self.width * 0.5;
+        let h = self.height * 0.5;
+
+        let c = self.rotation_angle.cos();
+        let s = self.rotation_angle.sin();
+
+        let x1 = self.center.0 + w * c - h * s;
+        let y1 = self.center.1 + w * s + h * c;
+
+        let x2 = self.center.0 - w * c - h * s;
+        let y2 = self.center.1 - w * s + h * c;
+
+        let x3 = self.center.0 - w * c + h * s;
+        let y3 = self.center.1 - w * s - h * c;
+
+        let x4 = self.center.0 + w * c + h * s;
+        let y4 = self.center.1 + w * s - h * c;
+
+        // Draw the body
+        draw_triangle(
+            Vec2 { x: x1, y: y1 },
+            Vec2 { x: x2, y: y2 },
+            Vec2 { x: x3, y: y3 },
+            GREEN,
+        );
+        draw_triangle(
+            Vec2 { x: x1, y: y1 },
+            Vec2 { x: x3, y: y3 },
+            Vec2 { x: x4, y: y4 },
+            GREEN,
+        );
+    }
+
+    fn get_center(&self) -> (f32, f32) {
+        self.center
+    }
+
+    fn get_bounds(&self) -> (f32, f32) {
+        (self.width, self.height)
+    }
+
+    fn get_rotation(&self) -> f32 {
+        self.rotation_angle
+    }
 }
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -43,8 +167,8 @@ enum PlayMode {
 
 struct EguiInterface {
     pub clicked_mode: Mode,
-    pub object_vector: Vec<(f32, f32, Mode)>,
-    pub nearest_object: (f32, f32, Mode),
+    pub object_vector: Vec<Box<dyn Object>>,
+    pub nearest_object_index: Option<usize>,
     pub play: PlayMode,
 
     // Sender for filebox
@@ -57,7 +181,7 @@ impl EguiInterface {
         EguiInterface {
             clicked_mode: Mode::None,
             object_vector: Vec::new(),
-            nearest_object: (0.0, 0.0, Mode::None),
+            nearest_object_index: None,
             play: PlayMode::Play,
 
             open_file_path_sender: open_sender,
@@ -140,7 +264,13 @@ impl EguiInterface {
                 }
             });
             ui.menu_button("View", |ui| {
-                let light_mode_button = ui.button("Toggle Mode");
+                let dark_mode = ui.visuals().dark_mode;
+                let mut mode_string = "Dark Mode";
+                if dark_mode {
+                    mode_string = "Light Mode";
+                }
+
+                let light_mode_button = ui.button(mode_string);
 
                 if light_mode_button.clicked() {
                     let visuals = if ui.visuals().dark_mode {
@@ -175,14 +305,16 @@ impl EguiInterface {
         if self.clicked_mode == Mode::Circle {
             draw_circle(mx, my, 25.0, RED);
         } else if self.clicked_mode == Mode::Rectangle {
-            draw_rectangle(mx, my, 50.0, 100.0, GREEN);
+            draw_rectangle(mx - 25.0, my - 50.0, 50.0, 100.0, GREEN);
         }
 
         if is_mouse_button_down(MouseButton::Left) {
             if self.clicked_mode == Mode::Circle {
-                self.object_vector.push((mx, my, Mode::Circle));
+                self.object_vector
+                    .push(Box::new(CircleObj::new(25.0, (mx, my))));
             } else if self.clicked_mode == Mode::Rectangle {
-                self.object_vector.push((mx, my, Mode::Rectangle));
+                self.object_vector
+                    .push(Box::new(RectangleObj::new(50.0, 100.0, (mx, my))));
             }
 
             self.clicked_mode = Mode::None;
@@ -191,54 +323,73 @@ impl EguiInterface {
         }
 
         for obj in self.object_vector.iter() {
-            match obj.2 {
-                Mode::None => {}
-                Mode::Circle => {
-                    draw_circle(obj.0, obj.1, 25.0, RED);
-                }
-                Mode::Rectangle => {
-                    draw_rectangle(obj.0, obj.1, 50.0, 100.0, GREEN);
-                }
-            }
+            obj.draw();
         }
     }
 
     fn deal_with_click_on_objects(&mut self, ctx: &egui::Context) {
         let (mx, my) = mouse_position();
 
-        for obj in self.object_vector.iter() {
-            if ((mx - obj.0).powf(2.0) + (my - obj.1).powf(2.0)).sqrt() < 10.0 {
-                self.nearest_object = *obj;
+        for obj in self.object_vector.iter().enumerate() {
+            let center = obj.1.get_center();
+            let (width, height) = obj.1.get_bounds();
+            if (mx - center.0).abs() < 0.25 * width && (my - center.1).abs() < 0.25 * height {
+                self.nearest_object_index = Some(obj.0);
             }
         }
 
-        match self.nearest_object.2 {
-            Mode::None => {
-                SidePanel::right("Circle Configuration").show(ctx, |ui| {});
-            }
-            Mode::Circle => {
-                SidePanel::right("Circle Configuration").show(ctx, |ui| {
-                    ui.label("Selected Circle");
-                    ui.label(format!(
-                        "Position: {}, {}",
-                        self.nearest_object.0, self.nearest_object.1
-                    ));
-                });
-            }
+        match self.nearest_object_index {
+            None => {}
+            Some(obj) => {
+                Window::new("Configuration")
+                    .min_width(250.0)
+                    .collapsible(true)
+                    .show(ctx, |ui| {
+                        ui.with_layout(Layout::top_down(egui::Align::Center), |ui| {
+                            ui.with_layout(Layout::left_to_right(egui::Align::Min), |ui| {
+                                ui.label("Bounds: ");
+                                let (mut width, mut height) = self.object_vector[obj].get_bounds();
+                                ui.add(egui::DragValue::new(&mut width));
+                                ui.add(egui::DragValue::new(&mut height));
 
-            Mode::Rectangle => {
-                SidePanel::right("Rectangle Configuration").show(ctx, |ui| {
-                    ui.label("Selected Rectangle");
-                    ui.label(format!(
-                        "Position: {}, {}",
-                        self.nearest_object.0, self.nearest_object.1
-                    ));
-                });
+                                self.object_vector[obj].modify_bounds(width, height);
+                            });
+
+                            ui.with_layout(Layout::left_to_right(egui::Align::Min), |ui| {
+                                let mut rotation = self.object_vector[obj].get_rotation();
+                                ui.label("Rotation: ");
+                                ui.add(egui::Slider::new(&mut rotation, -3.14..=3.14));
+                                self.object_vector[obj].modify_rotation(rotation);
+                            });
+
+                            ui.with_layout(Layout::left_to_right(egui::Align::Min), |ui| {
+                                ui.label("Center: ");
+                                let (mut cx, mut cy) = self.object_vector[obj].get_center();
+                                ui.add(egui::DragValue::new(&mut cx));
+                                ui.add(egui::DragValue::new(&mut cy));
+
+                                self.object_vector[obj].modify_position(cx, cy);
+                            });
+
+                            ui.separator();
+
+                            ui.with_layout(Layout::left_to_right(egui::Align::Min), |ui| {
+                                ui.label("Delete object Permanently: ");
+                                let delete_button = ui.button("Delete");
+
+                                if delete_button.clicked() {
+                                    self.object_vector.remove(obj);
+
+                                    self.nearest_object_index = None;
+                                }
+                            });
+                        });
+                    });
             }
         }
 
         if is_mouse_button_down(MouseButton::Right) {
-            self.nearest_object = (0.0, 0.0, Mode::None);
+            self.nearest_object_index = None;
         }
     }
 
@@ -295,8 +446,6 @@ async fn main() {
     let mut sim_handler = SimulationHandler::new();
     let mut egui_handler = EguiInterface::new(sender, save_sender);
 
-    let mut object_vector: Vec<(f32, f32, Mode)> = Vec::new();
-
     loop {
         clear_background(WHITE);
 
@@ -352,4 +501,15 @@ fn execute<F: Future<Output = ()> + Send + 'static>(f: F) {
 #[cfg(target_arch = "wasm32")]
 fn execute<F: Future<Output = ()> + 'static>(f: F) {
     wasm_bindgen_futures::spawn_local(f);
+}
+
+fn send_data(publisher: &zmq::Socket) {
+    let vel = VelocityQuery {
+        robot_id: "robot0".to_string(),
+        velocity: (0.1, 0.1),
+    };
+    let vel_as_string = serde_json::to_string(&vel).expect("Could not convert");
+
+    publisher.send(&format!("{}", 10011), zmq::SNDMORE).unwrap();
+    publisher.send(&vel_as_string.to_owned(), 0).unwrap();
 }
