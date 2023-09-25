@@ -1,8 +1,5 @@
 use std::iter::zip;
 
-use egui_macroquad::egui::*;
-use macroquad::prelude::*;
-
 use crate::behaviour::traits::{Collidable, Drawable};
 use crate::object::robot::Robot;
 use crate::object::sensors::LiDARMsg;
@@ -10,6 +7,10 @@ use crate::object::static_obj::StaticObj;
 use crate::object::wall::Wall;
 use crate::parameter::*;
 use crate::parser::*;
+use crate::prelude::traits::{Genericbject, GuiObject};
+use crate::prelude::Footprint;
+use egui_macroquad::egui::*;
+use macroquad::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct RobotHandler {
@@ -22,10 +23,22 @@ impl RobotHandler {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub enum SelectedObjectType {
+    Robot,
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub enum ObjectParameterType {
+    Position(f32, f32),
+    Rotation(f32),
+    Bounds(f32, f32),
+}
+
 pub struct SimulationHandler {
     robots: Vec<Robot>,
-    objects: Vec<Box<dyn Collidable>>,
-    artists: Vec<Box<dyn Drawable>>,
+    objects: Vec<Box<dyn Genericbject>>,
 
     walls: Vec<Wall>,
     static_objects: Vec<StaticObj>,
@@ -38,7 +51,6 @@ impl SimulationHandler {
         return SimulationHandler {
             robots: Vec::new(),
             objects: Vec::new(),
-            artists: Vec::new(),
 
             walls: Vec::new(),
             static_objects: Vec::new(),
@@ -71,7 +83,12 @@ impl SimulationHandler {
         }
 
         for obj in config.static_objects.iter() {
-            sim_handle.add_static_obj(StaticObj::new(obj.center, obj.width, obj.height));
+            sim_handle.add_static_obj(StaticObj::new(
+                obj.center,
+                obj.width,
+                obj.height,
+                obj.rotation,
+            ));
         }
 
         return (sim_handle, robot_handles);
@@ -83,7 +100,6 @@ impl SimulationHandler {
     pub fn reset(&mut self) {
         self.robots.clear();
         self.objects.clear();
-        self.artists.clear();
 
         self.walls.clear();
         self.static_objects.clear();
@@ -104,12 +120,27 @@ impl SimulationHandler {
         }
 
         for obj in config.static_objects.iter() {
-            self.add_static_obj(StaticObj::new(obj.center, obj.width, obj.height));
+            self.add_static_obj(StaticObj::new(
+                obj.center,
+                obj.width,
+                obj.height,
+                obj.rotation,
+            ));
         }
     }
 
     pub fn add_robot(&mut self, robot: Robot) -> (String, RobotHandler) {
         let name = robot.id.clone();
+
+        println!(
+            "
+        Added robot with name : {}. Radius: {}, Center: {}, {}",
+            name,
+            robot.get_bounds().0,
+            robot.get_center().0,
+            robot.get_center().1
+        );
+
         self.robots.push(robot);
 
         return (
@@ -122,14 +153,12 @@ impl SimulationHandler {
 
     pub fn add_wall(&mut self, wall: Wall) {
         self.objects.push(Box::new(wall.clone()));
-        self.artists.push(Box::new(wall.clone()));
 
         self.walls.push(wall.clone());
     }
 
     pub fn add_static_obj(&mut self, obj: StaticObj) {
         self.objects.push(Box::new(obj.clone()));
-        self.artists.push(Box::new(obj.clone()));
 
         self.static_objects.push(obj.clone());
     }
@@ -139,11 +168,163 @@ impl SimulationHandler {
     }
 
     pub fn sense(&self, robot: &RobotHandler) -> LiDARMsg {
-        return self.robots[robot.id].sense(&self.objects);
+        let mut collidables_vector = Vec::new();
+        for obj in self.objects.iter() {
+            collidables_vector.push(obj.get_collidable());
+        }
+        return self.robots[robot.id].sense(&collidables_vector);
     }
 
     pub fn get_pose(&self, robot: &RobotHandler) -> (f32, f32, f32) {
         return self.robots[robot.id].pose;
+    }
+
+    pub fn get_nearest_object(&self, x: f32, y: f32) -> (Option<SelectedObjectType>, i32) {
+        // First check all robots
+        let mut selected_object_type = None;
+        let mut nearest_index: i32 = -1;
+
+        for i in 0..self.robots.len() {
+            let robot = self.robots[i].clone();
+            let (rx, ry) = (robot.pose.0, robot.pose.1);
+
+            match robot.shape {
+                Footprint::Circular(r) => {
+                    if (rx - x).abs() < r.radius && (ry - y).abs() < r.radius {
+                        selected_object_type = Some(SelectedObjectType::Robot);
+                        nearest_index = i as i32;
+
+                        return (selected_object_type, nearest_index);
+                    }
+                }
+
+                Footprint::Rectangular(c) => {
+                    if (rx - x).abs() < c.half_extents.x * 2.0
+                        && (ry - y).abs() < c.half_extents.y * 2.0
+                    {
+                        selected_object_type = Some(SelectedObjectType::Robot);
+                        nearest_index = i as i32;
+
+                        return (selected_object_type, nearest_index);
+                    }
+                }
+            }
+        }
+
+        // Now check for generic objects
+        // This might not work really well for Walls. We dont what to do anything for walls as of now.
+        for i in 0..self.objects.len() {
+            let object = self.objects[i].as_ref();
+
+            if (x - object.get_pose().0).abs() < object.get_bounds().0
+                && (y - object.get_pose().1).abs() < object.get_bounds().1
+            {
+                selected_object_type = Some(SelectedObjectType::Other);
+                nearest_index = i as i32;
+
+                return (selected_object_type, nearest_index);
+            }
+        }
+
+        return (selected_object_type, nearest_index);
+    }
+
+    pub fn get_parameters_of_selected_object(
+        &self,
+        selected_object: (Option<SelectedObjectType>, i32),
+        parameter_type: ObjectParameterType,
+    ) -> ObjectParameterType {
+        let (selected_type, index) = selected_object;
+
+        match selected_type {
+            Some(t) => match t {
+                SelectedObjectType::Robot => match parameter_type {
+                    ObjectParameterType::Bounds(_w, _h) => {
+                        let bounds = self.robots[index as usize].get_bounds();
+                        return ObjectParameterType::Bounds(bounds.0, bounds.1);
+                    }
+                    ObjectParameterType::Rotation(_angle) => {
+                        let angle = self.robots[index as usize].get_rotation();
+                        return ObjectParameterType::Rotation(angle);
+                    }
+                    ObjectParameterType::Position(_x, _y) => {
+                        let position = self.robots[index as usize].get_center();
+
+                        return ObjectParameterType::Position(position.0, position.1);
+                    }
+                },
+                SelectedObjectType::Other => match parameter_type {
+                    ObjectParameterType::Bounds(_w, _h) => {
+                        let bounds = self.objects[index as usize].get_bounds();
+
+                        return ObjectParameterType::Bounds(bounds.0, bounds.1);
+                    }
+                    ObjectParameterType::Rotation(_angle) => {
+                        let angle = self.objects[index as usize].get_rotation();
+                        return ObjectParameterType::Rotation(angle);
+                    }
+                    ObjectParameterType::Position(_x, _y) => {
+                        let position = self.objects[index as usize].get_center();
+                        return ObjectParameterType::Position(position.0, position.1);
+                    }
+                },
+            },
+            None => {
+                return ObjectParameterType::Rotation(0.0);
+            }
+        }
+    }
+
+    pub fn change_parameters_of_selected_object(
+        &mut self,
+        selected_object: (Option<SelectedObjectType>, i32),
+        parameter_type: ObjectParameterType,
+    ) {
+        let (selected_type, index) = selected_object;
+
+        match selected_type {
+            Some(t) => match t {
+                SelectedObjectType::Robot => match parameter_type {
+                    ObjectParameterType::Bounds(w, h) => {
+                        self.robots[index as usize].modify_bounds(w, h)
+                    }
+                    ObjectParameterType::Rotation(angle) => {
+                        self.robots[index as usize].modify_rotation(angle)
+                    }
+                    ObjectParameterType::Position(x, y) => {
+                        self.robots[index as usize].modify_position(x, y)
+                    }
+                },
+                SelectedObjectType::Other => match parameter_type {
+                    ObjectParameterType::Bounds(w, h) => {
+                        self.objects[index as usize].modify_bounds(w, h)
+                    }
+                    ObjectParameterType::Rotation(angle) => {
+                        self.objects[index as usize].modify_rotation(angle)
+                    }
+                    ObjectParameterType::Position(x, y) => {
+                        self.objects[index as usize].modify_position(x, y)
+                    }
+                },
+            },
+            None => {}
+        }
+    }
+
+    pub fn delete_selected_object(&mut self, selected_object: (Option<SelectedObjectType>, i32)) {
+        let (selected_type, index) = selected_object;
+
+        match selected_type {
+            Some(t) => match t {
+                SelectedObjectType::Other => {
+                    let _val = self.objects.remove(index as usize);
+                }
+                SelectedObjectType::Robot => {
+                    let _val = self.robots.remove(index as usize);
+                }
+            },
+            None => {}
+        }
     }
 
     // TODO: Check if this can be simplified
@@ -163,7 +344,8 @@ impl SimulationHandler {
 
             // Object Collisions
             for object in self.objects.iter() {
-                object_collision = robot.collision_check_at(object.as_ref(), &next_pose);
+                object_collision =
+                    robot.collision_check_at(&(*object.get_collidable()), &next_pose);
                 if object_collision {
                     break;
                 }
@@ -195,7 +377,7 @@ impl SimulationHandler {
     pub fn collision_status_at(&self, roboth: &RobotHandler, pose: &(f32, f32, f32)) -> bool {
         let robot = self.robots[roboth.id].clone();
         for object in self.objects.iter() {
-            let collision = robot.collision_check_at(object.as_ref(), pose);
+            let collision = robot.collision_check_at(&*object.get_collidable(), pose);
             if collision {
                 return true;
             }
@@ -224,6 +406,7 @@ impl SimulationHandler {
                 center: obj.center.clone(),
                 width: obj.width,
                 height: obj.height,
+                rotation: obj.rotation,
             });
         }
 
@@ -234,7 +417,7 @@ impl SimulationHandler {
         }
     }
 
-    pub fn draw(&self) {
+    pub fn draw_lines(&self) {
         for x in (1..screen_width() as i32).step_by((1.0 / RESOLUTION) as usize) {
             draw_line(x as f32, 0.0, x as f32, screen_height(), 1.0, LIGHTGRAY)
         }
@@ -249,21 +432,33 @@ impl SimulationHandler {
                 LIGHTGRAY,
             )
         }
-
+    }
+    pub fn draw(&self) {
         for robot in self.robots.iter() {
             robot.draw(Self::tf_function);
         }
 
-        for artist in self.artists.iter() {
-            artist.draw(Self::tf_function);
+        for object in self.objects.iter() {
+            object.draw(Self::tf_function);
         }
     }
 
-    fn tf_function(pos: (f32, f32)) -> (f32, f32) {
+    pub fn tf_function(pos: (f32, f32)) -> (f32, f32) {
         let i = (pos.0 - XLIMS.0) / RESOLUTION;
         let j = (YLIMS.1 - pos.1) / RESOLUTION;
 
         return (i, j);
+    }
+
+    pub fn get_world_from_pixel(px: f32, py: f32) -> (f32, f32) {
+        let wx = XLIMS.0 + px * RESOLUTION;
+        let wy = YLIMS.1 - py * RESOLUTION;
+
+        return (wx, wy);
+    }
+
+    pub fn scale_function(value: f32) -> f32 {
+        return value * RESOLUTION;
     }
 }
 
@@ -310,8 +505,12 @@ impl RenderingHandler {
         }
 
         for obj in config.static_objects.iter() {
-            self.artists
-                .push(Box::new(StaticObj::new(obj.center, obj.width, obj.height)));
+            self.artists.push(Box::new(StaticObj::new(
+                obj.center,
+                obj.width,
+                obj.height,
+                obj.rotation,
+            )));
         }
     }
 

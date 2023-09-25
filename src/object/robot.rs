@@ -2,9 +2,9 @@ use macroquad::prelude::*;
 use parry2d::math::Vector;
 use parry2d::shape::{Ball, Cuboid};
 
-use crate::behaviour::traits::Drawable;
+use crate::behaviour::traits::{Drawable, GuiObject};
 use crate::parameter::{DT, RESOLUTION};
-use crate::prelude::traits::{Collidable, Sensable};
+use crate::prelude::traits::{Collidable, Genericbject, Sensable};
 use crate::prelude::RobotConfig;
 use crate::utils::normalise;
 
@@ -83,6 +83,16 @@ impl Robot {
                 shape: fshape,
                 lidar: Vec::new(),
             };
+        }
+    }
+
+    pub fn from_id_and_pose(id: String, pose: (f32, f32, f32), radius: f32) -> Self {
+        Robot {
+            id: id,
+            pose: pose,
+            vel: (0.0, 0.0),
+            shape: Footprint::Circular(Ball { radius: radius }),
+            lidar: vec![LiDAR::new(pose)],
         }
     }
 
@@ -229,5 +239,48 @@ impl Drawable for Robot {
                 draw_line(tf_pos.0, tf_pos.1, tf2_pos.0, tf2_pos.1, 2.0, RED);
             }
         }
+    }
+}
+
+impl GuiObject for Robot {
+    fn get_bounds(&self) -> (f32, f32) {
+        match self.shape {
+            Footprint::Circular(b) => (b.radius, b.radius),
+            Footprint::Rectangular(c) => (c.half_extents.x * 2.0, c.half_extents.y * 2.0),
+        }
+    }
+
+    fn get_center(&self) -> (f32, f32) {
+        (self.pose.0, self.pose.1)
+    }
+
+    fn get_rotation(&self) -> f32 {
+        self.pose.2
+    }
+
+    fn modify_bounds(&mut self, width: f32, height: f32) {
+        match self.shape {
+            Footprint::Circular(_r) => self.shape = Footprint::Circular(Ball { radius: width }),
+            Footprint::Rectangular(_c) => {
+                self.shape = Footprint::Rectangular(Cuboid {
+                    half_extents: Vector::new(width * 0.5, height * 0.5),
+                })
+            }
+        }
+    }
+
+    fn modify_position(&mut self, x: f32, y: f32) {
+        self.pose.0 = x;
+        self.pose.1 = y;
+    }
+
+    fn modify_rotation(&mut self, angle: f32) {
+        self.pose.2 = angle;
+    }
+}
+
+impl Genericbject for Robot {
+    fn get_collidable(&self) -> Box<dyn Collidable> {
+        return Box::new(Self::clone(&self));
     }
 }

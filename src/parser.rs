@@ -1,6 +1,6 @@
 use serde::{Deserialize, Serialize};
-use serde_yaml;
 use serde_json;
+use serde_yaml;
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct WallConfig {
@@ -12,6 +12,7 @@ pub struct StaticObjConfig {
     pub center: (f32, f32),
     pub width: f32,
     pub height: f32,
+    pub rotation: f32,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
@@ -30,30 +31,25 @@ pub struct Config {
     pub static_objects: Vec<StaticObjConfig>,
 }
 
-
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Twist
-{
+pub struct Twist {
     pub id: String,
-    pub vel: (f32, f32)
+    pub vel: (f32, f32),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct TwistArray
-{
+pub struct TwistArray {
     pub twists: Vec<Twist>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Position
-{
-    pub id: String, 
-    pub pose: (f32, f32, f32)
+pub struct Position {
+    pub id: String,
+    pub pose: (f32, f32, f32),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct PositionArray
-{
+pub struct PositionArray {
     pub positions: Vec<Position>,
 }
 
@@ -65,14 +61,12 @@ pub fn get_config_from_file(path: String) -> Config {
     return config;
 }
 
-pub fn get_config_to_string(config: Config) -> String
-{
+pub fn get_config_to_string(config: Config) -> String {
     let value = serde_json::to_string(&config).expect("Couldn't convert the config to String");
     return value.to_string();
 }
 
-pub fn get_config_from_string(string: String) -> Config
-{
+pub fn get_config_from_string(string: String) -> Config {
     let config: Config = serde_json::from_str(&string).expect("Couldn't convert the config");
     return config;
 }
