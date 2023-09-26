@@ -108,10 +108,6 @@ impl GuiObject for StaticObj {
     }
 
     fn get_bounds(&self) -> (f32, f32) {
-        println!(
-            "Get bounds function: Width: {} Height: {}",
-            self.width, self.height
-        );
         (self.width, self.height)
     }
 

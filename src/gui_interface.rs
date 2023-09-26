@@ -23,10 +23,19 @@ pub enum PlayMode {
     Pause,
 }
 
+#[derive(Debug, PartialEq, Clone, Copy)]
+pub enum ObjectSelectMode {
+    Rotate,
+    Bound,
+    Center,
+    None,
+}
+
 pub struct EguiInterface {
     pub clicked_mode: Mode,
     pub nearest_object_index: (Option<SelectedObjectType>, i32),
     pub play: PlayMode,
+    pub object_select_mode: ObjectSelectMode,
 
     // Sender for filebox
     pub open_file_path_sender: Sender<String>,
@@ -51,6 +60,7 @@ impl EguiInterface {
 
             open_file_path_sender: open_sender,
             save_file_path_sender: save_sender,
+            object_select_mode: ObjectSelectMode::None,
 
             robot_handlers: Vec::new(),
             robot_name_map: HashMap::new(),
@@ -155,15 +165,53 @@ impl EguiInterface {
     fn draw_top_bar_elements(&mut self, ui: &mut egui::Ui) {
         // Add a menu bar
         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-            let circle_button = ui.add(egui::Button::new("Add Robot ⏺"));
-            if circle_button.clicked() {
-                self.clicked_mode = Mode::Robot;
-            }
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
+                let circle_button = ui.add(egui::Button::new("Add Robot ⏺"));
+                if circle_button.clicked() {
+                    self.clicked_mode = Mode::Robot;
+                }
 
-            let rectangle_button = ui.add(egui::Button::new("Add Static Obj ▭"));
-            if rectangle_button.clicked() {
-                self.clicked_mode = Mode::StaticObj;
-            }
+                let rectangle_button = ui.add(egui::Button::new("Add Static Obj ▭"));
+                if rectangle_button.clicked() {
+                    self.clicked_mode = Mode::StaticObj;
+                }
+            });
+
+            ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                if ui
+                    .add_enabled(
+                        self.object_select_mode != ObjectSelectMode::Rotate,
+                        egui::Button::new("Modify Rotation"),
+                    )
+                    .clicked()
+                {
+                    self.object_select_mode = ObjectSelectMode::Rotate;
+                }
+
+                if ui
+                    .add_enabled(
+                        self.object_select_mode != ObjectSelectMode::Bound,
+                        egui::Button::new("Modify Bounds"),
+                    )
+                    .clicked()
+                {
+                    self.object_select_mode = ObjectSelectMode::Bound;
+                }
+
+                if ui
+                    .add_enabled(
+                        self.object_select_mode != ObjectSelectMode::Center,
+                        egui::Button::new("Modify Center"),
+                    )
+                    .clicked()
+                {
+                    self.object_select_mode = ObjectSelectMode::Center;
+                }
+
+                if is_mouse_button_down(MouseButton::Right) {
+                    self.object_select_mode = ObjectSelectMode::None;
+                }
+            });
         });
     }
 
@@ -215,91 +263,38 @@ impl EguiInterface {
         // We are doing this in order toupdate the index only when we click near some object.
         let did_we_get_nearest_object = sh.get_nearest_object(x, y);
         match did_we_get_nearest_object.0 {
-            Some(_r) => self.nearest_object_index = did_we_get_nearest_object,
+            Some(_r) => {
+                if is_mouse_button_down(MouseButton::Left) {
+                    self.nearest_object_index = did_we_get_nearest_object;
+                    println!("Got nearest object");
+                }
+            }
             None => {}
         }
 
         let (object_type, index) = (self.nearest_object_index.0, self.nearest_object_index.1);
 
+        // Now here we will have the object type and index saved together
         match object_type {
             None => {}
             Some(_obj) => {
-                Window::new("Configuration")
-                    .min_width(250.0)
-                    .collapsible(true)
-                    .show(ctx, |ui| {
-                        ui.with_layout(Layout::top_down(egui::Align::Center), |ui| {
-                            ui.with_layout(Layout::left_to_right(egui::Align::Min), |ui| {
-                                ui.label("Bounds: ");
-                            });
-
-                            ui.with_layout(Layout::left_to_right(egui::Align::Min), |ui| {
-                                let mut rotation = 0.0;
-                                match sh.get_parameters_of_selected_object(
-                                    self.nearest_object_index,
-                                    ObjectParameterType::Rotation(0.0),
-                                ) {
-                                    ObjectParameterType::Rotation(r) => rotation = r,
-                                    _ => {}
-                                }
-                                ui.label("Rotation: ");
-                                let rotation_value_changed = ui
-                                    .add(egui::Slider::new(&mut rotation, -3.14..=3.14))
-                                    .changed();
-
-                                if rotation_value_changed {
-                                    sh.change_parameters_of_selected_object(
-                                        self.nearest_object_index,
-                                        ObjectParameterType::Rotation(rotation),
-                                    )
-                                }
-                            });
-
-                            ui.with_layout(Layout::left_to_right(egui::Align::Min), |ui| {
-                                ui.label("Center: ");
-                                let mut x = 0.0;
-                                let mut y = 0.0;
-
-                                match sh.get_parameters_of_selected_object(
-                                    self.nearest_object_index,
-                                    ObjectParameterType::Position(0.0, 0.0),
-                                ) {
-                                    ObjectParameterType::Position(cx, cy) => {
-                                        x = cx;
-                                        y = cy
-                                    }
-                                    _ => {}
-                                }
-                                let x_position_changed =
-                                    ui.add(egui::DragValue::new(&mut x)).changed();
-                                let y_position_changed =
-                                    ui.add(egui::DragValue::new(&mut y)).changed();
-
-                                if x_position_changed || y_position_changed {
-                                    sh.change_parameters_of_selected_object(
-                                        self.nearest_object_index,
-                                        ObjectParameterType::Position(x, y),
-                                    )
-                                }
-                            });
-
-                            ui.separator();
-
-                            ui.with_layout(Layout::left_to_right(egui::Align::Min), |ui| {
-                                ui.label("Delete object Permanently: ");
-                                let delete_button = ui.button("Delete");
-
-                                if delete_button.clicked() {
-                                    sh.delete_selected_object(self.nearest_object_index);
-
-                                    self.nearest_object_index = (None, -1);
-                                }
-                            });
-                        });
-                    });
+                if is_mouse_button_pressed(MouseButton::Left) {
+                    match self.object_select_mode {
+                        ObjectSelectMode::None => {}
+                        ObjectSelectMode::Bound => {}
+                        ObjectSelectMode::Center => {
+                            let (mx, my) = mouse_position();
+                            let (wx, wy) = SimulationHandler::get_world_from_pixel(mx, my);
+                            sh.change_parameters_of_selected_object(
+                                (object_type, index),
+                                ObjectParameterType::Position(wx, wy),
+                            );
+                        }
+                        ObjectSelectMode::Rotate => {}
+                    }
+                }
             }
         }
-
         if is_mouse_button_down(MouseButton::Right) {
             self.nearest_object_index = (None, -1);
         }
