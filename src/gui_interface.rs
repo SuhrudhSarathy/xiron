@@ -281,7 +281,26 @@ impl EguiInterface {
                 if is_mouse_button_pressed(MouseButton::Left) {
                     match self.object_select_mode {
                         ObjectSelectMode::None => {}
-                        ObjectSelectMode::Bound => {}
+                        ObjectSelectMode::Bound => {
+                            let (mx, my) = mouse_position();
+                            let (wx, wy) = SimulationHandler::get_world_from_pixel(mx, my);
+                            let center = sh.get_parameters_of_selected_object(
+                                self.nearest_object_index,
+                                ObjectParameterType::Position(0.0, 0.0),
+                            );
+                            match center {
+                                ObjectParameterType::Position(x, y) => {
+                                    let width = (wx - x).abs();
+                                    let heigh = (wy - y).abs();
+
+                                    sh.change_parameters_of_selected_object(
+                                        self.nearest_object_index,
+                                        ObjectParameterType::Bounds(width, heigh),
+                                    );
+                                }
+                                _ => {}
+                            }
+                        }
                         ObjectSelectMode::Center => {
                             let (mx, my) = mouse_position();
                             let (wx, wy) = SimulationHandler::get_world_from_pixel(mx, my);
@@ -290,7 +309,24 @@ impl EguiInterface {
                                 ObjectParameterType::Position(wx, wy),
                             );
                         }
-                        ObjectSelectMode::Rotate => {}
+                        ObjectSelectMode::Rotate => {
+                            let (mx, my) = mouse_position();
+                            let (wx, wy) = SimulationHandler::get_world_from_pixel(mx, my);
+                            let center = sh.get_parameters_of_selected_object(
+                                self.nearest_object_index,
+                                ObjectParameterType::Position(0.0, 0.0),
+                            );
+                            match center {
+                                ObjectParameterType::Position(x, y) => {
+                                    let rotation = (wy - y).atan2(wx - x);
+                                    sh.change_parameters_of_selected_object(
+                                        self.nearest_object_index,
+                                        ObjectParameterType::Rotation(rotation),
+                                    );
+                                }
+                                _ => {}
+                            }
+                        }
                     }
                 }
             }
