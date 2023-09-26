@@ -24,14 +24,15 @@ async fn main() {
 
         // send_data(&publisher);
 
-        // match reciever.try_recv() {
-        //     Ok(message) => {
-        //         println!("Got Open message here: {}", message);
-        //         sim_handler.load_file_path(message);
-        //         sim_handler.reset();
-        //     }
-        //     Err(_) => {}
-        // }
+        match reciever.try_recv() {
+            Ok(message) => {
+                println!("Got Open message here: {}", message);
+                let mut sh = sim_handler_mutex_clone.lock().unwrap();
+                sh.load_file_path(message);
+                sh.reset();
+            }
+            Err(_) => {}
+        }
 
         match save_reciever.try_recv() {
             Ok(message) => {

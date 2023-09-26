@@ -121,6 +121,7 @@ impl EguiInterface {
                     let task = rfd::AsyncFileDialog::new().pick_file();
                     let sender = self.open_file_path_sender.clone();
                     // Await somewhere else
+                    // TODO: This is buggy
                     execute(async move {
                         let file = task.await;
 
