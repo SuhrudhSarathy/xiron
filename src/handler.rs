@@ -154,6 +154,8 @@ impl SimulationHandler {
     pub fn add_wall(&mut self, wall: Wall) {
         self.objects.push(Box::new(wall.clone()));
 
+        println!("\n{:?}\n added", wall.coords);
+
         self.walls.push(wall.clone());
     }
 
@@ -418,20 +420,67 @@ impl SimulationHandler {
     }
 
     pub fn draw_lines(&self) {
-        for x in (1..screen_width() as i32).step_by((1.0 / RESOLUTION) as usize) {
-            draw_line(x as f32, 0.0, x as f32, screen_height(), 1.0, LIGHTGRAY)
-        }
+        let one_meter_step = Self::inverse_scale_function(1.0);
 
-        for y in (1..screen_height() as i32).step_by((1.0 / RESOLUTION) as usize) {
+        let mut x = XLIMS.0;
+        let mut y = YLIMS.0;
+
+        while x < XLIMS.1 {
+            let init_coord = Self::tf_function((x, YLIMS.0));
+            let final_coord = Self::tf_function((x, YLIMS.1));
             draw_line(
-                0.0 as f32,
-                y as f32,
-                screen_width(),
-                y as f32,
+                init_coord.0,
+                init_coord.1,
+                final_coord.0 as f32,
+                final_coord.1,
                 1.0,
                 LIGHTGRAY,
-            )
+            );
+
+            x += 1.0;
         }
+
+        while y < YLIMS.1 {
+            let init_coord = Self::tf_function((XLIMS.0, y));
+            let final_coord = Self::tf_function((XLIMS.1, y));
+            draw_line(
+                init_coord.0,
+                init_coord.1,
+                final_coord.0 as f32,
+                final_coord.1,
+                1.0,
+                LIGHTGRAY,
+            );
+
+            y += 1.0;
+        }
+
+        // Draw origin
+        let origin_coord = (0.0, 0.0);
+        let one_meter_in_x = (1.0, 0.0);
+        let one_meter_in_y = (0.0, 1.0);
+
+        let origin_in_pixel_frame = Self::tf_function(origin_coord);
+        let one_meterx_in_pixel_frame = Self::tf_function(one_meter_in_x);
+        let one_metery_in_pixel_frame = Self::tf_function(one_meter_in_y);
+
+        draw_line(
+            origin_in_pixel_frame.0,
+            origin_in_pixel_frame.1,
+            one_meterx_in_pixel_frame.0,
+            one_meterx_in_pixel_frame.1,
+            2.0,
+            GREEN,
+        );
+
+        draw_line(
+            origin_in_pixel_frame.0,
+            origin_in_pixel_frame.1,
+            one_metery_in_pixel_frame.0,
+            one_metery_in_pixel_frame.1,
+            2.0,
+            RED,
+        );
     }
     pub fn draw(&self) {
         for robot in self.robots.iter() {
@@ -443,6 +492,7 @@ impl SimulationHandler {
         }
     }
 
+    /// Get pixel coordinate from World
     pub fn tf_function(pos: (f32, f32)) -> (f32, f32) {
         let i = (pos.0 - XLIMS.0) / RESOLUTION;
         let j = (YLIMS.1 - pos.1) / RESOLUTION;
@@ -450,6 +500,7 @@ impl SimulationHandler {
         return (i, j);
     }
 
+    /// Get World coordinate from Pixel
     pub fn get_world_from_pixel(px: f32, py: f32) -> (f32, f32) {
         let wx = XLIMS.0 + px * RESOLUTION;
         let wy = YLIMS.1 - py * RESOLUTION;
@@ -457,8 +508,14 @@ impl SimulationHandler {
         return (wx, wy);
     }
 
+    /// Gives scale in world frame
     pub fn scale_function(value: f32) -> f32 {
         return value * RESOLUTION;
+    }
+
+    /// Gives scale in pixel map frame
+    pub fn inverse_scale_function(value: f32) -> f32 {
+        return value / RESOLUTION;
     }
 }
 

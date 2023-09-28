@@ -8,6 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::prelude::{
     ObjectParameterType, Robot, RobotHandler, SelectedObjectType, SimulationHandler, StaticObj,
+    Wall,
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -31,6 +32,13 @@ pub enum ObjectSelectMode {
     None,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum WallDrawStatus {
+    WallStart,
+    WallMid(Vec<(f32, f32)>),
+    Idle,
+}
+
 pub struct EguiInterface {
     pub clicked_mode: Mode,
     pub nearest_object_index: (Option<SelectedObjectType>, i32),
@@ -44,6 +52,9 @@ pub struct EguiInterface {
     sim_handler: Arc<Mutex<SimulationHandler>>,
     robot_handlers: Vec<RobotHandler>,
     robot_name_map: HashMap<String, RobotHandler>,
+
+    // local variables
+    wall_draw_status: WallDrawStatus,
 }
 
 impl EguiInterface {
@@ -64,6 +75,8 @@ impl EguiInterface {
 
             robot_handlers: Vec::new(),
             robot_name_map: HashMap::new(),
+
+            wall_draw_status: WallDrawStatus::Idle,
         }
     }
 
@@ -121,7 +134,6 @@ impl EguiInterface {
                     let task = rfd::AsyncFileDialog::new().pick_file();
                     let sender = self.open_file_path_sender.clone();
                     // Await somewhere else
-                    // TODO: This is buggy
                     execute(async move {
                         let file = task.await;
 
@@ -160,6 +172,18 @@ impl EguiInterface {
                     ctx.set_visuals(visuals);
                 }
             });
+
+            ui.menu_button("Help", |ui| {
+                let _general_help =
+                    ui.hyperlink_to("General", "https://github.com/SuhrudhSarathy/xiron");
+                let _interface_help = ui.hyperlink_to(
+                    "Python Interface",
+                    "https://github.com/SuhrudhSarathy/xiron",
+                );
+                ui.separator();
+                let _documentation_button =
+                    ui.hyperlink_to("Documentation", "https://github.com/SuhrudhSarathy/xiron");
+            });
         });
     }
 
@@ -175,6 +199,11 @@ impl EguiInterface {
                 let rectangle_button = ui.add(egui::Button::new("Add Static Obj ▭"));
                 if rectangle_button.clicked() {
                     self.clicked_mode = Mode::StaticObj;
+                }
+
+                let wall_button = ui.add(egui::Button::new("Add Wall ||"));
+                if wall_button.clicked() {
+                    self.clicked_mode = Mode::Wall;
                 }
             });
 
@@ -209,7 +238,7 @@ impl EguiInterface {
                     self.object_select_mode = ObjectSelectMode::Center;
                 }
 
-                if is_mouse_button_down(MouseButton::Right) {
+                if is_key_pressed(KeyCode::Escape) {
                     self.object_select_mode = ObjectSelectMode::None;
                 }
             });
@@ -218,39 +247,80 @@ impl EguiInterface {
 
     fn add_objects_from_top_bar(&mut self) {
         let (mx, my) = mouse_position();
+        let mut sh = self.sim_handler.lock().unwrap();
 
         if self.clicked_mode == Mode::Robot {
-            draw_circle(mx, my, 25.0, BLACK);
+            draw_circle(mx, my, 10.0, BLACK);
         } else if self.clicked_mode == Mode::StaticObj {
-            draw_rectangle(mx - 25.0, my - 50.0, 50.0, 100.0, BLACK);
-        }
+            draw_rectangle(mx - 25.0, my - 50.0, 50.0, 100.0, GRAY);
+        } else if self.clicked_mode == Mode::Wall {
+            match &mut self.wall_draw_status {
+                WallDrawStatus::Idle => {
+                    // This is the first time Wall was selected
+                    self.wall_draw_status = WallDrawStatus::WallStart;
+                }
+                WallDrawStatus::WallStart => {
+                    if is_mouse_button_pressed(MouseButton::Left) {
+                        let (mx, my) = mouse_position();
+                        let wall_coords_vector: Vec<(f32, f32)> = vec![(mx, my)];
+                        self.wall_draw_status = WallDrawStatus::WallMid(wall_coords_vector);
+                    }
+                }
+                WallDrawStatus::WallMid(vector) => {
+                    for i in 0..vector.len() - 1 {
+                        let p0 = vector[i];
+                        let p1 = vector[i + 1];
 
-        let mut sh = self.sim_handler.lock().unwrap();
+                        // Draw a line for this
+                        draw_line(p0.0, p0.1, p1.0, p1.1, 2.0, BLACK);
+                    }
+                    let p0 = vector[vector.len() - 1];
+                    draw_line(p0.0, p0.1, mx, my, 2.0, BLACK);
+
+                    if is_mouse_button_pressed(MouseButton::Left) {
+                        vector.push((mx, my));
+                    } else if is_mouse_button_pressed(MouseButton::Right) {
+                        let mut tfed_pts = Vec::new();
+                        for pt in vector.iter() {
+                            let out_pt = SimulationHandler::get_world_from_pixel(pt.0, pt.1);
+                            tfed_pts.push(out_pt);
+                        }
+
+                        let wall = Wall::new(tfed_pts);
+                        sh.add_wall(wall);
+                        self.wall_draw_status = WallDrawStatus::Idle;
+                        self.clicked_mode = Mode::None;
+                    } else if is_key_pressed(KeyCode::Escape) {
+                        self.wall_draw_status = WallDrawStatus::Idle;
+                        self.clicked_mode = Mode::None;
+                    }
+                }
+            }
+        }
 
         if is_mouse_button_down(MouseButton::Left) {
             let (x, y) = SimulationHandler::get_world_from_pixel(mx, my);
             if self.clicked_mode == Mode::Robot {
                 let robot_id = format!("robot{}", self.robot_handlers.len());
-                println!("Radius: {:?}", SimulationHandler::scale_function(25.0));
                 let (_, robot_handler) = sh.add_robot(Robot::from_id_and_pose(
                     robot_id.clone(),
                     (x, y, 0.0),
-                    SimulationHandler::scale_function(25.0),
+                    SimulationHandler::scale_function(10.0),
                 ));
 
                 self.robot_handlers.push(robot_handler);
                 self.robot_name_map.insert(robot_id, robot_handler);
+                self.clicked_mode = Mode::None;
             } else if self.clicked_mode == Mode::StaticObj {
                 sh.add_static_obj(StaticObj::new(
                     (x, y),
                     SimulationHandler::scale_function(50.0),
                     SimulationHandler::scale_function(100.0),
                     0.0,
-                ))
+                ));
+                self.clicked_mode = Mode::None;
             }
-
-            self.clicked_mode = Mode::None;
-        } else if is_mouse_button_down(MouseButton::Right) {
+        } else if is_key_pressed(KeyCode::Escape) {
             self.clicked_mode = Mode::None;
         }
     }
@@ -332,16 +402,15 @@ impl EguiInterface {
                 }
             }
         }
-        if is_mouse_button_down(MouseButton::Right) {
+        if is_key_pressed(KeyCode::Escape) {
             self.nearest_object_index = (None, -1);
         }
     }
 
     fn handle_bottom_bar(&mut self, ui: &mut egui::Ui) {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
-            ui.with_layout(
-                egui::Layout::left_to_right(egui::Align::TOP),
-                |ui| match self.play {
+            ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
+                match self.play {
                     PlayMode::Pause => {
                         let button = ui.add(Button::new("Play ▶"));
                         if button.clicked() {
@@ -355,8 +424,8 @@ impl EguiInterface {
                             self.play = PlayMode::Pause;
                         }
                     }
-                },
-            );
+                };
+            });
             ui.with_layout(
                 egui::Layout::centered_and_justified(egui::Direction::LeftToRight),
                 |ui| {

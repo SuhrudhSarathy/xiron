@@ -1,4 +1,4 @@
-pub const RESOLUTION: f32 = 0.05;
+pub const RESOLUTION: f32 = 0.025;
 pub const DT: f32 = 1.0 / 60.0;
 pub const XLIMS: (f32, f32) = (-15.0, 15.0);
 pub const YLIMS: (f32, f32) = (-15.0, 15.0);
