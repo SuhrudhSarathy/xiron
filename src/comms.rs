@@ -1,4 +1,7 @@
+use std::{thread, time::Duration};
+
 use serde::{Deserialize, Serialize};
+use std::sync::mpsc::Sender;
 use zmq::{Context, Socket};
 
 #[derive(Debug, Deserialize, Default, Serialize)]
@@ -55,30 +58,45 @@ impl Publisher {
 
 pub struct Subscriber {
     _subscriber: Socket,
-    topic_name: String,
+    spin_every: Duration,
+    sender: Sender<String>,
 }
 
 impl Subscriber {
-    pub fn new(context: &Context, topic_name: String) -> Self {
-        let _subscriber = context.socket(zmq::PUB).unwrap();
+    pub fn new(context: &Context, spin_every: Duration, sender: Sender<String>) -> Self {
+        let _subscriber = context.socket(zmq::SUB).unwrap();
         Self {
             _subscriber: _subscriber,
-            topic_name: topic_name,
+            spin_every: spin_every,
+            sender: sender,
         }
     }
 
-    pub fn bind(&self, address: String) {
-        self._subscriber.bind(&address).expect("Could not bind");
-        let subscription = format!("{:03}", self.topic_name).into_bytes();
-        self._subscriber.set_subscribe(&subscription).unwrap();
+    pub fn bind(&self, topic_name: String, address: String) {
+        self._subscriber.connect(&address).expect("Could not bind");
+        let _out = self
+            ._subscriber
+            .set_subscribe(topic_name.as_bytes())
+            .unwrap();
     }
 
-    pub fn recv(&self) -> String {
-        let _topic = self._subscriber.recv_msg(0).unwrap();
-        let data = self._subscriber.recv_msg(0).unwrap();
+    pub fn recv(&self) -> Option<String> {
+        let _topic = self._subscriber.recv_bytes(0).unwrap();
+        let message = self._subscriber.recv_string(0).unwrap().unwrap();
 
-        let data_as_str = std::str::from_utf8(&data).unwrap();
+        return Some(message);
+    }
 
-        return data_as_str.to_string();
+    pub fn spin(self) {
+        thread::spawn(move || loop {
+            let out = self.recv();
+
+            match out {
+                Some(data) => self.sender.send(data).unwrap(),
+                None => {}
+            }
+
+            thread::sleep(self.spin_every);
+        });
     }
 }

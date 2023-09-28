@@ -1,4 +1,6 @@
 use std::sync::{Arc, Mutex};
+use std::time::Duration;
+use xiron::comms::Twist;
 use xiron::prelude::*;
 
 #[macroquad::main(xiron)]
@@ -6,13 +8,15 @@ async fn main() {
     println!("This will be the new simulator");
 
     let context = zmq::Context::new();
-    // let publisher = context.socket(zmq::PUB).unwrap();
-    // publisher
-    //     .bind("tcp://*:8080")
-    //     .expect("Could not bind to the socket");
 
     let pose_publisher = Publisher::new(&context, "pose".to_string());
-    pose_publisher.bind("tcp://*:8080".to_string());
+    pose_publisher.bind("tcp://127.0.0.1:5555".to_string());
+
+    let (string_sender, string_reciever) = std::sync::mpsc::channel();
+    let vel_subscriber = Subscriber::new(&context, Duration::from_millis(100), string_sender);
+
+    vel_subscriber.bind("vel".to_string(), "tcp://127.0.0.1:5556".to_string());
+    vel_subscriber.spin();
 
     let (sender, reciever) = std::sync::mpsc::channel();
     let (save_sender, save_reciever) = std::sync::mpsc::channel();
@@ -24,8 +28,6 @@ async fn main() {
 
     loop {
         clear_background(WHITE);
-
-        // send_data(&publisher);
 
         match reciever.try_recv() {
             Ok(message) => {
@@ -76,7 +78,7 @@ async fn main() {
         egui_macroquad::draw();
 
         {
-            let sh = sim_handler_mutex_clone.lock().unwrap();
+            let mut sh = sim_handler_mutex_clone.lock().unwrap();
             let robot_handler = egui_handler.get_robot_handler("robot0".to_string());
             match robot_handler {
                 None => {}
@@ -89,6 +91,20 @@ async fn main() {
                     };
                     pose_publisher.send(&pose_msg);
                 }
+            }
+
+            let output = string_reciever.try_recv();
+            match output {
+                Ok(output) => {
+                    let twist_command: Twist = serde_json::from_str(&output.to_string()).unwrap();
+                    match robot_handler {
+                        None => {}
+                        Some(handler) => {
+                            sh.control(&handler, (twist_command.linear.0, twist_command.angular));
+                        }
+                    }
+                }
+                Err(_error) => {}
             }
         }
 
