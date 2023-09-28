@@ -1,4 +1,4 @@
-use egui_macroquad::egui::{self, Button, Layout, TopBottomPanel, Window};
+use egui_macroquad::egui::{self, Button, TopBottomPanel};
 use egui_macroquad::egui::{Context, Visuals};
 use macroquad::prelude::*;
 use std::collections::HashMap;
@@ -325,7 +325,7 @@ impl EguiInterface {
         }
     }
 
-    fn deal_with_click_on_objects(&mut self, ctx: &egui::Context) {
+    fn deal_with_click_on_objects(&mut self, _ctx: &egui::Context) {
         let (mx, my) = mouse_position();
         let (x, y) = SimulationHandler::get_world_from_pixel(mx, my);
 

@@ -420,7 +420,7 @@ impl SimulationHandler {
     }
 
     pub fn draw_lines(&self) {
-        let one_meter_step = Self::inverse_scale_function(1.0);
+        let _one_meter_step = Self::inverse_scale_function(1.0);
 
         let mut x = XLIMS.0;
         let mut y = YLIMS.0;
