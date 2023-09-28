@@ -6,10 +6,13 @@ async fn main() {
     println!("This will be the new simulator");
 
     let context = zmq::Context::new();
-    let publisher = context.socket(zmq::PUB).unwrap();
-    publisher
-        .bind("tcp://*:8080")
-        .expect("Could not bind to the socket");
+    // let publisher = context.socket(zmq::PUB).unwrap();
+    // publisher
+    //     .bind("tcp://*:8080")
+    //     .expect("Could not bind to the socket");
+
+    let pose_publisher = Publisher::new(&context, "pose".to_string());
+    pose_publisher.bind("tcp://*:8080".to_string());
 
     let (sender, reciever) = std::sync::mpsc::channel();
     let (save_sender, save_reciever) = std::sync::mpsc::channel();
@@ -71,6 +74,23 @@ async fn main() {
         }
 
         egui_macroquad::draw();
+
+        {
+            let sh = sim_handler_mutex_clone.lock().unwrap();
+            let robot_handler = egui_handler.get_robot_handler("robot0".to_string());
+            match robot_handler {
+                None => {}
+                Some(handler) => {
+                    let pose = sh.get_pose(&handler);
+                    let pose_msg = Pose {
+                        robot_id: "robot0".to_string(),
+                        position: (pose.0, pose.1),
+                        orientation: pose.2,
+                    };
+                    pose_publisher.send(&pose_msg);
+                }
+            }
+        }
 
         next_frame().await;
     }

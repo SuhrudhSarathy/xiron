@@ -50,8 +50,8 @@ pub struct EguiInterface {
     pub save_file_path_sender: Sender<String>,
 
     sim_handler: Arc<Mutex<SimulationHandler>>,
-    robot_handlers: Vec<RobotHandler>,
-    robot_name_map: HashMap<String, RobotHandler>,
+    pub robot_handlers: Vec<RobotHandler>,
+    pub robot_name_map: HashMap<String, RobotHandler>,
 
     // local variables
     wall_draw_status: WallDrawStatus,
@@ -77,6 +77,15 @@ impl EguiInterface {
             robot_name_map: HashMap::new(),
 
             wall_draw_status: WallDrawStatus::Idle,
+        }
+    }
+
+    pub fn get_robot_handler(&self, robot_id: String) -> Option<RobotHandler> {
+        let handler = self.robot_name_map.get(&robot_id);
+
+        match handler {
+            Some(h) => return Some(h.clone()),
+            None => return None,
         }
     }
 

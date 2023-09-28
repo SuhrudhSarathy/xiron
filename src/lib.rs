@@ -1,5 +1,6 @@
 pub mod algorithms;
 pub mod behaviour;
+pub mod comms;
 pub mod gui_interface;
 pub mod handler;
 pub mod object;

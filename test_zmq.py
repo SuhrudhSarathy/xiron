@@ -16,11 +16,8 @@ if __name__ == "__main__":
     s = ctx.socket(zmq.SUB)
     s.connect("tcp://localhost:8080")
     val = "1000"
-    s.subscribe(b"10011")
+    s.subscribe(b"pose")
 
     while True:
-        output = s.recv_json(0)
-        if type(output) == dict:
-            vel = VelocityRequest(**output)
-
-            print(vel)
+        output = s.recv_string(0)
+        print(output)
