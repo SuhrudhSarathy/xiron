@@ -7,7 +7,4 @@ pub use crate::parameter::*;
 pub use crate::parser::*;
 pub use crate::utils::*;
 
-extern crate macroquad;
-
 pub use crate::comms::*;
-pub use macroquad::prelude::*;

@@ -79,7 +79,7 @@ impl EguiInterface {
             wall_draw_status: WallDrawStatus::Idle,
         }
     }
-
+    /// Returns the Robot Handler of a given robot string
     pub fn get_robot_handler(&self, robot_id: String) -> Option<RobotHandler> {
         let handler = self.robot_name_map.get(&robot_id);
 
@@ -89,19 +89,24 @@ impl EguiInterface {
         }
     }
 
+    /// Main function for rendinering Egui Elements on the screen
     pub fn show_elements(&mut self, ctx: &egui::Context) {
-        TopBottomPanel::top("FileEditViewBar").show(ctx, |ui| self.draw_file_top_bar(ctx, ui));
-        TopBottomPanel::top("MainTopBar").show(ctx, |ui| self.draw_top_bar_elements(ui));
-        TopBottomPanel::bottom("Play-Pause Button").show(ctx, |ui| self.handle_bottom_bar(ui));
+        TopBottomPanel::top("FileEditViewBar")
+            .show(ctx, |ui| self.draw_file_edit_view_help_bar(ctx, ui));
+        TopBottomPanel::top("MainTopBar")
+            .show(ctx, |ui| self.draw_adding_and_modifying_objects_bar(ui));
+        TopBottomPanel::bottom("Play-Pause Button")
+            .show(ctx, |ui| self.draw_bottom_play_pause_bar(ui));
 
         // draw stuff
-        self.add_objects_from_top_bar();
+        self.add_selected_objects_to_canvas();
 
         // Deal with clicks on Objects
         self.deal_with_click_on_objects(ctx);
     }
 
-    fn draw_file_top_bar(&mut self, ctx: &Context, ui: &mut egui::Ui) {
+    /// Draws and handles all Egui elemts for the Top bar containing
+    fn draw_file_edit_view_help_bar(&mut self, ctx: &Context, ui: &mut egui::Ui) {
         egui::menu::bar(ui, |ui| {
             ui.menu_button("File", |ui| {
                 let save_config_button = ui.button("Save Config");
@@ -196,7 +201,9 @@ impl EguiInterface {
         });
     }
 
-    fn draw_top_bar_elements(&mut self, ui: &mut egui::Ui) {
+    /// Draws buttons for adding Robot, Static Object and Wall to the screen.
+    /// Also draws the buttons for Modifying Rotation, Bounds and Position.
+    fn draw_adding_and_modifying_objects_bar(&mut self, ui: &mut egui::Ui) {
         // Add a menu bar
         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
@@ -254,7 +261,8 @@ impl EguiInterface {
         });
     }
 
-    fn add_objects_from_top_bar(&mut self) {
+    /// Draws the selected objects to screen and also updates teh Simulation handler when clicked.
+    fn add_selected_objects_to_canvas(&mut self) {
         let (mx, my) = mouse_position();
         let mut sh = self.sim_handler.lock().unwrap();
 
@@ -334,6 +342,7 @@ impl EguiInterface {
         }
     }
 
+    /// Fucntion to deal when an object is clicked
     fn deal_with_click_on_objects(&mut self, _ctx: &egui::Context) {
         let (mx, my) = mouse_position();
         let (x, y) = SimulationHandler::get_world_from_pixel(mx, my);
@@ -416,7 +425,8 @@ impl EguiInterface {
         }
     }
 
-    fn handle_bottom_bar(&mut self, ui: &mut egui::Ui) {
+    /// Function to draw the bottom bar
+    fn draw_bottom_play_pause_bar(&mut self, ui: &mut egui::Ui) {
         ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
             ui.with_layout(egui::Layout::left_to_right(egui::Align::TOP), |ui| {
                 match self.play {

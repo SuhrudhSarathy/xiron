@@ -48,7 +48,7 @@ if __name__ == "__main__":
 
     while True:
         topic = b"vel"  # The topic for the message (can be any bytes-like object)
-        vel_obj = Twist("robot0", [0.0, 0.0], 0.0)
+        vel_obj = Twist("robot0", [0.2, 0.0], 0.2)
         vel_string = json.dumps(asdict(vel_obj))
         message = vel_string.encode(
             "utf-8"
