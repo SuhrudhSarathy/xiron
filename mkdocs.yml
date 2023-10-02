@@ -1,8 +1,11 @@
 site_name: Xiron
-site_url: https://example.com/
+site_url: https://suhrudhsarathy.github.io/xiron/
+repo_url: https://github.com/SuhrudhSarathy/xiron
+repo_name: Github
 nav:
-  - Home: index.md
-  - Installation: installation.md
+  - Getting Started:
+    - Home: index.md
+    - Installation: installation.md
   - User Guide:
     - Configuration: user_guide/configuration.md
     - GUI usage: user_guide/gui_usage.md
@@ -10,4 +13,6 @@ nav:
   - Advanced Usage:
     - Customising Robot Model: advanced/robot_model.md
     - Multi Robot Usage: advanced/multi_robot_usage.md
+  - Contributor's Guide:
+    - contributions.md
 theme: readthedocs
