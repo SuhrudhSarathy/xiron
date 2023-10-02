@@ -1,37 +1,42 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
-         <loc>https://example.com/</loc>
+         <loc>https://suhrudhsarathy.github.io/xiron/</loc>
          <lastmod>2023-10-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/installation/</loc>
+         <loc>https://suhrudhsarathy.github.io/xiron/contributions/</loc>
          <lastmod>2023-10-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/advanced/multi_robot_usage/</loc>
+         <loc>https://suhrudhsarathy.github.io/xiron/installation/</loc>
          <lastmod>2023-10-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/advanced/robot_model/</loc>
+         <loc>https://suhrudhsarathy.github.io/xiron/advanced/multi_robot_usage/</loc>
          <lastmod>2023-10-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/user_guide/configuration/</loc>
+         <loc>https://suhrudhsarathy.github.io/xiron/advanced/robot_model/</loc>
          <lastmod>2023-10-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/user_guide/gui_usage/</loc>
+         <loc>https://suhrudhsarathy.github.io/xiron/user_guide/configuration/</loc>
          <lastmod>2023-10-02</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
-         <loc>https://example.com/user_guide/python_interface/</loc>
+         <loc>https://suhrudhsarathy.github.io/xiron/user_guide/gui_usage/</loc>
+         <lastmod>2023-10-02</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://suhrudhsarathy.github.io/xiron/user_guide/python_interface/</loc>
          <lastmod>2023-10-02</lastmod>
          <changefreq>daily</changefreq>
     </url>

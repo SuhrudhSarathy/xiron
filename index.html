@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="description" content="None" /><link rel="canonical" href="https://example.com/" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><link rel="canonical" href="https://suhrudhsarathy.github.io/xiron/" />
       <link rel="shortcut icon" href="img/favicon.ico" />
-    <title>Xiron</title>
+    <title>Home - Xiron</title>
     <link rel="stylesheet" href="css/theme.css" />
     <link rel="stylesheet" href="css/theme_extra.css" />
         <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.8.0/styles/github.min.css" />
@@ -14,7 +14,7 @@
         // Current page data
         var mkdocs_page_name = "Home";
         var mkdocs_page_input_path = "index.md";
-        var mkdocs_page_url = "/";
+        var mkdocs_page_url = "/xiron/";
       </script>
     
     <!--[if lt IE 9]>
@@ -39,15 +39,22 @@
       </div>
 
       <div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption"><span class="caption-text">Getting Started</span></p>
               <ul class="current">
-                <li class="toctree-l1 current"><a class="reference internal current" href=".">Home</a>
+                  <li class="toctree-l1 current"><a class="reference internal current" href=".">Home</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#inspiration">Inspiration</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#great-alternatives">Great Alternatives</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#contributions">Contributions</a>
+    </li>
     </ul>
-                </li>
-              </ul>
-              <ul>
-                <li class="toctree-l1"><a class="reference internal" href="installation/">Installation</a>
-                </li>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="installation/">Installation</a>
+                  </li>
               </ul>
               <p class="caption"><span class="caption-text">User Guide</span></p>
               <ul>
@@ -65,6 +72,11 @@
                   <li class="toctree-l1"><a class="reference internal" href="advanced/multi_robot_usage/">Multi Robot Usage</a>
                   </li>
               </ul>
+              <p class="caption"><span class="caption-text">Contributor's Guide</span></p>
+              <ul>
+                  <li class="toctree-l1"><a class="reference internal" href="contributions/">Contributions</a>
+                  </li>
+              </ul>
       </div>
     </div>
     </nav>
@@ -79,8 +91,10 @@
         <div class="rst-content"><div role="navigation" aria-label="breadcrumbs navigation">
   <ul class="wy-breadcrumbs">
     <li><a href="." class="icon icon-home" aria-label="Docs"></a></li>
+          <li class="breadcrumb-item">Getting Started</li>
       <li class="breadcrumb-item active">Home</li>
     <li class="wy-breadcrumbs-aside">
+          <a href="https://github.com/SuhrudhSarathy/xiron/edit/master/docs/index.md" class="icon icon-github"> Edit on Github</a>
     </li>
   </ul>
   <hr/>
@@ -88,8 +102,31 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                <h1 id="xiron">Xiron</h1>
-<p>Hello World</p>
+                <h1 id="getting-started-with-xiron">Getting Started with Xiron</h1>
+<p><code>xiron</code> is a light weight 2D Robot Simulator written entirely in the <a href="https://www.rust-lang.org">Rust Programming language</a>. <code>xiron</code> was intended to be used for two purposes. Firstly, it is aimed to reduce the entry barrier to the field of Robotics by proiving an easy to use 2D simulator. Secondly, it is intended to provide a fast and light weight simulator to test and prototype navigation algorithms without the use of realistic simulations.</p>
+<p><img alt="Simulator" src="resources/images/simulator.png" /></p>
+<h2 id="inspiration">Inspiration</h2>
+<p>The inspiration to develop Xiron came from a basic need to setup up quick simulations. There were limited simulators that were independent of ROS and had a simple Python interface that fit my use case. Additionally, I wanted to learn more about the Rust Programming Langauge and ended up using it for the project.</p>
+<h2 id="great-alternatives">Great Alternatives</h2>
+<p>Some great alternatives that provide simple 2D robot simulations </br>
+1. <a href="https://flatland-simulator.readthedocs.io/en/latest/overview.html">Flatland Simulator</a> : Perfromat 2D simulator developed by Avidbots Corp <br>
+2. <a href="https://pyrobosim.readthedocs.io/en/latest/">Pyrobosim</a> : Pyrobosim is a ROS 2 enabled 2D mobile robot simulator for behavior prototyping.</p>
+<h2 id="overview">Overview</h2>
+<ul>
+<li>User Guide:<ul>
+<li><a href="user_guide/configuration/">Configuration</a></li>
+<li><a href="user_guide/gui_usage/">GUI usage</a></li>
+<li><a href="user_guide/python_interface/">Python Interface</a></li>
+</ul>
+</li>
+<li>Advanced Usage<ul>
+<li><a href="advanced/robot_model/">Customising Robot Model</a></li>
+<li><a href="advanced/multi_robot_usage/">Multi Robot Usage</a></li>
+</ul>
+</li>
+</ul>
+<h2 id="contributions">Contributions</h2>
+<p>Feel free to contribute to the project. Take a look at the <a href="contributions/">Contributor's Guide</a> for more information.</p>
               
             </div>
           </div><footer>
@@ -135,8 +172,3 @@
 
 </body>
 </html>
-
-<!--
-MkDocs version : 1.5.3
-Build Date UTC : 2023-10-02 10:08:20.794433+00:00
--->
