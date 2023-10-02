@@ -3,7 +3,7 @@
 use crate::handler::RobotHandler;
 use crate::utils::normalise;
 
-pub enum PathControllerState {
+pub enum ProportionalControllerState {
     Init,
     Angular,
     Linear,
@@ -11,7 +11,7 @@ pub enum PathControllerState {
     Idle,
 }
 
-pub struct PathController {
+pub struct ProportionalController {
     pub robot: RobotHandler,
     pub dtolerance: f32,
     pub atolerance: f32,
@@ -24,14 +24,14 @@ pub struct PathController {
     pub path: Vec<(f32, f32, f32)>,
 
     i: usize,
-    state: PathControllerState,
+    state: ProportionalControllerState,
     prev_dist_error: f32,
     prev_angle_error: f32,
 }
 
-impl PathController {
-    pub fn new(robot: RobotHandler, dtolerance: f32, atolerance: f32) -> PathController {
-        PathController {
+impl ProportionalController {
+    pub fn new(robot: RobotHandler, dtolerance: f32, atolerance: f32) -> ProportionalController {
+        ProportionalController {
             robot: robot,
             dtolerance: dtolerance,
             atolerance: atolerance,
@@ -41,7 +41,7 @@ impl PathController {
             max_vel: (0.75, 1.0),
             path: Vec::new(),
             i: 0,
-            state: PathControllerState::Init,
+            state: ProportionalControllerState::Init,
             prev_dist_error: 0.0,
             prev_angle_error: 0.0,
         }
@@ -65,7 +65,7 @@ impl PathController {
     */
     pub fn control(&mut self, current_pose: &(f32, f32, f32)) -> (f32, f32) {
         if self.i == self.path.len() {
-            self.state = PathControllerState::Idle;
+            self.state = ProportionalControllerState::Idle;
         } else {
             let dx = self.path[self.i].0 - current_pose.0;
             let dy = self.path[self.i].1 - current_pose.1;
@@ -77,23 +77,23 @@ impl PathController {
             // Select state based on the current condition.
             if dtheta.abs() < self.atolerance {
                 if ddist.abs() < self.dtolerance {
-                    self.state = PathControllerState::Step;
+                    self.state = ProportionalControllerState::Step;
                 } else if ddist.abs() >= self.dtolerance {
-                    self.state = PathControllerState::Linear;
+                    self.state = ProportionalControllerState::Linear;
                 }
             } else if dtheta.abs() >= self.atolerance {
-                self.state = PathControllerState::Angular;
+                self.state = ProportionalControllerState::Angular;
             }
 
             /* Return velocities based on the state of the robot */
             match self.state {
-                PathControllerState::Init => return (0.0, 0.0),
-                PathControllerState::Step => {
+                ProportionalControllerState::Init => return (0.0, 0.0),
+                ProportionalControllerState::Step => {
                     self.i += 1;
                     return (0.0, 0.0);
                 }
-                PathControllerState::Idle => return (0.0, 0.0),
-                PathControllerState::Angular => {
+                ProportionalControllerState::Idle => return (0.0, 0.0),
+                ProportionalControllerState::Angular => {
                     let mut vel = self.kp * dtheta + self.kd * self.prev_angle_error;
                     if vel < -self.max_vel.1 {
                         vel = -self.max_vel.1;
@@ -104,7 +104,7 @@ impl PathController {
                     self.prev_angle_error = dtheta;
                     return (0.0, vel);
                 }
-                PathControllerState::Linear => {
+                ProportionalControllerState::Linear => {
                     let mut vel = self.kp * ddist + self.kd * self.prev_dist_error;
                     if vel < -self.max_vel.0 {
                         vel = -self.max_vel.0;

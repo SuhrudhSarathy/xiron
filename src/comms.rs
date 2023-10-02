@@ -1,134 +1,104 @@
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::{thread, time::Duration};
 
-// Implementation of the gRPC server interfaces
-use tonic::{Request, Response, Status};
+use serde::{Deserialize, Serialize};
+use zmq::{Context, Socket};
 
-pub mod xiron_interfaces {
-    tonic::include_proto!("xiron_interfaces"); // The string specified here must match the proto package name
+use std::sync::mpsc::Sender;
+
+#[derive(Debug, Deserialize, Default, Serialize)]
+pub struct Twist {
+    pub robot_id: String,
+    pub linear: (f32, f32),
+    pub angular: f32,
 }
 
-pub use xiron_interfaces::xiron_interface_server::{XironInterface, XironInterfaceServer};
-pub use xiron_interfaces::{
-    EmptyRequest, EmptyResponse, LidarRequest, LidarResponse, PoseRequest, PoseResponse,
-    VelocityRequest, VelocityResponse,
-};
-
-use tokio::sync::mpsc::UnboundedSender;
-
-use crate::handler::{RobotHandler, SimulationHandler};
-
-pub struct XironInterfaceServerImpl {
-    sim_handler: Arc<Mutex<SimulationHandler>>,
-    tx: UnboundedSender<Vec<(u8, f32, f32)>>,
-    robot_map: Arc<HashMap<String, RobotHandler>>,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Pose {
+    pub robot_id: String,
+    pub position: (f32, f32),
+    pub orientation: f32,
 }
 
-impl XironInterfaceServerImpl {
-    pub fn new(
-        sim_handler: Arc<Mutex<SimulationHandler>>,
-        tx: UnboundedSender<Vec<(u8, f32, f32)>>,
-        robot_map: Arc<HashMap<String, RobotHandler>>,
-    ) -> XironInterfaceServerImpl {
-        XironInterfaceServerImpl {
-            sim_handler,
-            tx,
-            robot_map,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LaserScan {
+    pub robot_id: String,
+    pub angle_min: f32,
+    pub angle_max: f32,
+    pub num_readings: i32,
+    pub values: Vec<f32>,
+}
+
+pub struct Publisher {
+    _publisher: Socket,
+    topic_name: String,
+}
+
+impl Publisher {
+    pub fn new(context: &Context, topic_name: String) -> Self {
+        let _publisher = context.socket(zmq::PUB).unwrap();
+        Publisher {
+            _publisher: _publisher,
+            topic_name: topic_name,
         }
     }
+
+    pub fn bind(&self, address: String) {
+        self._publisher.bind(&address).expect("Could not bind");
+    }
+
+    pub fn send<T: Serialize>(&self, message: &T) {
+        let message_as_string = serde_json::to_string(&message).expect("Could not convert");
+
+        self._publisher
+            .send(&format!("{}", self.topic_name), zmq::SNDMORE)
+            .unwrap();
+        self._publisher
+            .send(&message_as_string.to_owned(), 0)
+            .unwrap();
+    }
 }
-#[tonic::async_trait]
-impl XironInterface for XironInterfaceServerImpl {
-    async fn set_velocity(
-        &self,
-        request: Request<VelocityRequest>,
-    ) -> Result<Response<VelocityResponse>, Status> {
-        let req = request.into_inner();
-        let robot_id = req.id;
 
-        let robot_handler = self.robot_map.get(&robot_id).unwrap();
-        let v = req.v;
-        let w = req.w;
+pub struct Subscriber {
+    _subscriber: Socket,
+    spin_every: Duration,
+    sender: Sender<String>,
+}
 
-        let result = self
-            .tx
-            .send(vec![(robot_handler.id as u8, v as f32, w as f32)]);
+impl Subscriber {
+    pub fn new(context: &Context, spin_every: Duration, sender: Sender<String>) -> Self {
+        let _subscriber = context.socket(zmq::SUB).unwrap();
+        Self {
+            _subscriber: _subscriber,
+            spin_every: spin_every,
+            sender: sender,
+        }
+    }
 
-        // Send the reponse async
-        match result {
-            Ok(_) => {
-                let response = VelocityResponse { ack: true };
-                Ok(Response::new(response))
+    pub fn bind(&self, topic_name: String, address: String) {
+        self._subscriber.connect(&address).expect("Could not bind");
+        let _out = self
+            ._subscriber
+            .set_subscribe(topic_name.as_bytes())
+            .unwrap();
+    }
+
+    pub fn recv(&self) -> Option<String> {
+        let _topic = self._subscriber.recv_bytes(0).unwrap();
+        let message = self._subscriber.recv_string(0).unwrap().unwrap();
+
+        return Some(message);
+    }
+
+    pub fn spin(self) {
+        thread::spawn(move || loop {
+            let out = self.recv();
+
+            match out {
+                Some(data) => self.sender.send(data).unwrap(),
+                None => {}
             }
 
-            Err(_) => {
-                let response = VelocityResponse { ack: false };
-                Ok(Response::new(response))
-            }
-        }
-    }
-
-    async fn get_pose(
-        &self,
-        request: Request<PoseRequest>,
-    ) -> Result<Response<PoseResponse>, Status> {
-        let req = request.into_inner();
-        let robot_id = req.id;
-
-        let robot_handler = self.robot_map.get(&robot_id).unwrap();
-
-        // Get lock on sim handler
-        let sh = self.sim_handler.lock().unwrap();
-        let pose = sh.get_pose(robot_handler);
-
-        // // drop the mutex immediately as the later part is async
-        // drop(sh);
-
-        // Make the reponse
-        let resp = PoseResponse {
-            x: pose.0 as f64,
-            y: pose.1 as f64,
-            theta: pose.2 as f64,
-        };
-
-        Ok(Response::new(resp))
-    }
-
-    async fn get_lidar_scan(
-        &self,
-        request: Request<LidarRequest>,
-    ) -> Result<Response<LidarResponse>, Status> {
-        let req: LidarRequest = request.into_inner();
-        let robot_id = req.id;
-
-        let robot_handler = self.robot_map.get(&robot_id).unwrap();
-        let sh = self.sim_handler.lock().unwrap();
-
-        let lidar_msg = sh.sense(robot_handler);
-
-        let mut vals: Vec<f64> = Vec::new();
-
-        for val in lidar_msg.values.iter() {
-            vals.push(*val as f64);
-        }
-
-        let resp: LidarResponse = LidarResponse {
-            min_angle: lidar_msg.angle_min.clone() as f64,
-            max_angle: lidar_msg.angle_max.clone() as f64,
-            num_readings: lidar_msg.num_readings.clone() as i32,
-            values: vals,
-        };
-        Ok(Response::new(resp))
-    }
-
-    async fn reset_env(
-        &self,
-        _request: Request<EmptyRequest>,
-    ) -> Result<Response<EmptyResponse>, Status> {
-        let mut sh = self.sim_handler.lock().unwrap();
-        sh.reset();
-        let resp = EmptyResponse {};
-
-        Ok(Response::new(resp))
+            thread::sleep(self.spin_every);
+        });
     }
 }

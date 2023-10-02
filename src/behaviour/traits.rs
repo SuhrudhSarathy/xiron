@@ -5,6 +5,8 @@ use parry2d::shape::Shape;
 
 pub trait Drawable {
     fn draw(&self, tf: fn((f32, f32)) -> (f32, f32));
+
+    fn draw_bounds(&self, tf: fn((f32, f32)) -> (f32, f32));
 }
 
 pub trait Collidable {
@@ -92,4 +94,18 @@ pub trait Sensable {
 
     fn get_pose(&self) -> (f32, f32, f32);
     fn sense(&self, collidables: &Vec<Box<dyn Collidable>>) -> Self::OutputMsg;
+}
+
+pub trait GuiObject {
+    fn modify_bounds(&mut self, width: f32, height: f32);
+    fn modify_rotation(&mut self, angle: f32);
+    fn modify_position(&mut self, x: f32, y: f32);
+
+    fn get_center(&self) -> (f32, f32);
+    fn get_rotation(&self) -> f32;
+    fn get_bounds(&self) -> (f32, f32);
+}
+
+pub trait Genericbject: Collidable + Drawable + GuiObject {
+    fn get_collidable(&self) -> Box<dyn Collidable>;
 }

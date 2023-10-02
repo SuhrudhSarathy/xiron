@@ -1,0 +1,13 @@
+site_name: Xiron
+site_url: https://example.com/
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - User Guide:
+    - Configuration: user_guide/configuration.md
+    - GUI usage: user_guide/gui_usage.md
+    - Python Interface: user_guide/python_interface.md
+  - Advanced Usage:
+    - Customising Robot Model: advanced/robot_model.md
+    - Multi Robot Usage: advanced/multi_robot_usage.md
+theme: readthedocs
