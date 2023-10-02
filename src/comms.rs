@@ -3,7 +3,7 @@ use std::{thread, time::Duration};
 use serde::{Deserialize, Serialize};
 use zmq::{Context, Socket};
 
-use std::sync::mpsc::{channel, Receiver, Sender};
+use std::sync::mpsc::Sender;
 
 #[derive(Debug, Deserialize, Default, Serialize)]
 pub struct Twist {

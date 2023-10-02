@@ -13,6 +13,9 @@ async fn main() {
     let pose_publisher = Publisher::new(&context, "pose".to_string());
     pose_publisher.bind("tcp://127.0.0.1:5555".to_string());
 
+    let scan_publisher = Publisher::new(&context, "scan".to_string());
+    scan_publisher.bind("tcp://127.0.0.1:5555".to_string());
+
     let (string_sender, string_reciever) = std::sync::mpsc::channel();
     let vel_subscriber = Subscriber::new(&context, Duration::from_millis(100), string_sender);
 
@@ -80,17 +83,19 @@ async fn main() {
 
         {
             let mut sh = sim_handler_mutex_clone.lock().unwrap();
-            let robot_handler = egui_handler.get_robot_handler("robot0".to_string());
-            match robot_handler {
-                None => {}
-                Some(handler) => {
-                    let pose = sh.get_pose(&handler);
-                    let pose_msg = Pose {
-                        robot_id: "robot0".to_string(),
-                        position: (pose.0, pose.1),
-                        orientation: pose.2,
-                    };
-                    pose_publisher.send(&pose_msg);
+            for robot_name in egui_handler.robot_name_map.keys() {
+                let handler = egui_handler.get_robot_handler(robot_name);
+                match handler {
+                    Some(robot) => {
+                        let pose = sh.get_pose(&robot);
+                        let pose_msg = Pose {
+                            robot_id: robot_name.clone(),
+                            position: (pose.0, pose.1),
+                            orientation: pose.2,
+                        };
+                        pose_publisher.send(&pose_msg);
+                    }
+                    None => {}
                 }
             }
 
@@ -98,6 +103,7 @@ async fn main() {
             match output {
                 Ok(output) => {
                     let twist_command: Twist = serde_json::from_str(&output.to_string()).unwrap();
+                    let robot_handler = egui_handler.get_robot_handler(&twist_command.robot_id);
                     match robot_handler {
                         None => {}
                         Some(handler) => {

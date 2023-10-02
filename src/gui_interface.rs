@@ -79,8 +79,8 @@ impl EguiInterface {
         }
     }
     /// Returns the Robot Handler of a given robot string
-    pub fn get_robot_handler(&self, robot_id: String) -> Option<RobotHandler> {
-        let handler = self.robot_name_map.get(&robot_id);
+    pub fn get_robot_handler(&self, robot_id: &String) -> Option<RobotHandler> {
+        let handler = self.robot_name_map.get(robot_id);
 
         match handler {
             Some(h) => return Some(h.clone()),

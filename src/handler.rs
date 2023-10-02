@@ -5,11 +5,10 @@ use crate::object::robot::Robot;
 use crate::object::sensors::LiDARMsg;
 use crate::object::static_obj::StaticObj;
 use crate::object::wall::Wall;
+use crate::parameter::*;
 use crate::parser::*;
 use crate::prelude::traits::{Genericbject, GuiObject};
 use crate::prelude::Footprint;
-use crate::{object, parameter::*};
-use egui_macroquad::egui::*;
 use macroquad::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -508,7 +507,7 @@ impl SimulationHandler {
         }
     }
 
-    /// `et pixel coordinate from World
+    /// get pixel coordinate from World
     pub fn tf_function(pos: (f32, f32)) -> (f32, f32) {
         let i = (pos.0 - XLIMS.0) / RESOLUTION;
         let j = (YLIMS.1 - pos.1) / RESOLUTION;
