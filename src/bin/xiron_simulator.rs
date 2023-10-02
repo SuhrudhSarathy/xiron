@@ -112,6 +112,7 @@ async fn main() {
                     }
                 }
 
+                // Check if there were any velocity messages to process.
                 let output = string_reciever.try_recv();
                 match output {
                     Ok(output) => {
@@ -131,6 +132,8 @@ async fn main() {
                     Err(_error) => {}
                 }
             }
+
+            // Publish the Scan data and Pose data for each robot present.
             Some(t_last) => {
                 if (time_now - t_last) > (1.0 / DATA_SEND_FREQ_SEC) {
                     last_sent_time = Some(get_time());
