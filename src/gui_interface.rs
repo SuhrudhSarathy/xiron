@@ -23,7 +23,6 @@ pub enum PlayMode {
     Play,
     Pause,
 }
-
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum ObjectSelectMode {
     Rotate,
@@ -111,11 +110,17 @@ impl EguiInterface {
             ui.menu_button("File", |ui| {
                 let save_config_button = ui.button("Save Config");
                 let open_config_button = ui.button("Open Config");
+                let reset_simulation_button = ui.button("Reset Simulation");
                 ui.separator();
                 let close_button = ui.button("Close Simulator");
 
                 if close_button.clicked() {
                     std::process::exit(0);
+                }
+
+                if reset_simulation_button.clicked() {
+                    let mut sh = self.sim_handler.lock().unwrap();
+                    sh.reset();
                 }
 
                 if save_config_button.clicked() {
@@ -269,7 +274,7 @@ impl EguiInterface {
         if self.clicked_mode == Mode::Robot {
             draw_circle(mx, my, 10.0, BLACK);
         } else if self.clicked_mode == Mode::StaticObj {
-            draw_rectangle(mx - 25.0, my - 50.0, 50.0, 100.0, GRAY);
+            draw_rectangle(mx - 12.5, my - 12.5, 25.0, 25.0, GRAY);
         } else if self.clicked_mode == Mode::Wall {
             match &mut self.wall_draw_status {
                 WallDrawStatus::Idle => {
@@ -331,8 +336,8 @@ impl EguiInterface {
             } else if self.clicked_mode == Mode::StaticObj {
                 sh.add_static_obj(StaticObj::new(
                     (x, y),
-                    SimulationHandler::scale_function(50.0),
-                    SimulationHandler::scale_function(100.0),
+                    SimulationHandler::scale_function(25.0),
+                    SimulationHandler::scale_function(25.0),
                     0.0,
                 ));
                 self.clicked_mode = Mode::None;
@@ -349,17 +354,22 @@ impl EguiInterface {
 
         let mut sh = self.sim_handler.lock().unwrap();
 
-        // We are doing this in order toupdate the index only when we click near some object.
+        // We are doing this in order to update the index only when we click near some object.
         let did_we_get_nearest_object = sh.get_nearest_object(x, y);
         match did_we_get_nearest_object.0 {
             Some(_r) => {
                 if is_mouse_button_down(MouseButton::Left) {
                     self.nearest_object_index = did_we_get_nearest_object;
-                    println!("Got nearest object");
+                    // println!("Got nearest object");
                 }
             }
             None => {}
         }
+
+        /*
+        Piece of code to draw a green boundary on the selected object
+        */
+        sh.draw_bounds_of_selected_object(self.nearest_object_index);
 
         let (object_type, index) = (self.nearest_object_index.0, self.nearest_object_index.1);
 

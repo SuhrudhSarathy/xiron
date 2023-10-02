@@ -36,6 +36,7 @@ impl Drawable for Wall {
             draw_line(c1_tfed.0, c1_tfed.1, c2_tfed.0, c2_tfed.1, 3.0, BLACK);
         }
     }
+    fn draw_bounds(&self, _tf: fn((f32, f32)) -> (f32, f32)) {}
 }
 
 impl GuiObject for Wall {

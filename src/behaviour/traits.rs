@@ -5,6 +5,8 @@ use parry2d::shape::Shape;
 
 pub trait Drawable {
     fn draw(&self, tf: fn((f32, f32)) -> (f32, f32));
+
+    fn draw_bounds(&self, tf: fn((f32, f32)) -> (f32, f32));
 }
 
 pub trait Collidable {

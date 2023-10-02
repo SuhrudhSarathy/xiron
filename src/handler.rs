@@ -5,10 +5,10 @@ use crate::object::robot::Robot;
 use crate::object::sensors::LiDARMsg;
 use crate::object::static_obj::StaticObj;
 use crate::object::wall::Wall;
-use crate::parameter::*;
 use crate::parser::*;
 use crate::prelude::traits::{Genericbject, GuiObject};
 use crate::prelude::Footprint;
+use crate::{object, parameter::*};
 use egui_macroquad::egui::*;
 use macroquad::prelude::*;
 
@@ -201,9 +201,7 @@ impl SimulationHandler {
                 }
 
                 Footprint::Rectangular(c) => {
-                    if (rx - x).abs() < c.half_extents.x * 2.0
-                        && (ry - y).abs() < c.half_extents.y * 2.0
-                    {
+                    if (rx - x).abs() < c.half_extents.x && (ry - y).abs() < c.half_extents.y {
                         selected_object_type = Some(SelectedObjectType::Robot);
                         nearest_index = i as i32;
 
@@ -425,9 +423,9 @@ impl SimulationHandler {
         let mut x = XLIMS.0;
         let mut y = YLIMS.0;
 
-        while x < XLIMS.1 {
+        while x < screen_width() {
             let init_coord = Self::tf_function((x, YLIMS.0));
-            let final_coord = Self::tf_function((x, YLIMS.1));
+            let final_coord = Self::tf_function((x, screen_height()));
             draw_line(
                 init_coord.0,
                 init_coord.1,
@@ -440,9 +438,9 @@ impl SimulationHandler {
             x += 1.0;
         }
 
-        while y < YLIMS.1 {
+        while y < screen_height() {
             let init_coord = Self::tf_function((XLIMS.0, y));
-            let final_coord = Self::tf_function((XLIMS.1, y));
+            let final_coord = Self::tf_function((screen_width(), y));
             draw_line(
                 init_coord.0,
                 init_coord.1,
@@ -492,7 +490,25 @@ impl SimulationHandler {
         }
     }
 
-    /// Get pixel coordinate from World
+    pub fn draw_bounds_of_selected_object(
+        &self,
+        selected_object: (Option<SelectedObjectType>, i32),
+    ) {
+        let (selected_object_type, index) = selected_object;
+        match selected_object_type {
+            Some(object) => match object {
+                SelectedObjectType::Robot => {
+                    self.robots[index as usize].draw_bounds(Self::tf_function);
+                }
+                SelectedObjectType::Other => {
+                    self.objects[index as usize].draw_bounds(Self::tf_function);
+                }
+            },
+            None => {}
+        }
+    }
+
+    /// `et pixel coordinate from World
     pub fn tf_function(pos: (f32, f32)) -> (f32, f32) {
         let i = (pos.0 - XLIMS.0) / RESOLUTION;
         let j = (YLIMS.1 - pos.1) / RESOLUTION;
@@ -522,116 +538,3 @@ impl SimulationHandler {
 unsafe impl Sync for SimulationHandler {}
 
 unsafe impl Send for SimulationHandler {}
-
-pub struct RenderingHandler {
-    robots: Vec<Robot>,
-    artists: Vec<Box<dyn Drawable>>,
-}
-
-impl RenderingHandler {
-    fn tf_function(pos: (f32, f32)) -> (f32, f32) {
-        let i = (pos.0 - XLIMS.0) / RESOLUTION;
-        let j = (YLIMS.1 - pos.1) / RESOLUTION;
-
-        return (i, j);
-    }
-
-    pub fn new() -> RenderingHandler {
-        return RenderingHandler {
-            robots: Vec::new(),
-            artists: Vec::new(),
-        };
-    }
-
-    pub fn from_file(&mut self, filepath: String) {
-        let config = get_config_from_file(filepath);
-
-        for robot in config.robots.iter() {
-            self.robots.push(Robot::new(
-                robot.id.clone(),
-                robot.pose,
-                robot.vel,
-                robot.lidar,
-                robot.footprint.clone(),
-            ));
-        }
-
-        for wall in config.walls.iter() {
-            self.artists
-                .push(Box::new(Wall::new(wall.endpoints.clone())));
-        }
-
-        for obj in config.static_objects.iter() {
-            self.artists.push(Box::new(StaticObj::new(
-                obj.center,
-                obj.width,
-                obj.height,
-                obj.rotation,
-            )));
-        }
-    }
-
-    pub fn from_config(&mut self, config: &Config) {
-        // Here we are assuming that the robots are in the same order
-        // and hence, we go with a iterator without any search.
-        // Later on, we can solve this using some hashmap
-
-        for i in 0..config.robots.len() {
-            let robot_config = &config.robots[i];
-            let robot = &mut self.robots[i];
-
-            robot.update_from_config(robot_config);
-        }
-    }
-
-    pub fn draw(&self) {
-        // Draw vertical lines throughout the location
-        for x in (1..WIDTH as i32).step_by((1.0 / RESOLUTION) as usize) {
-            draw_line(x as f32, 0.0, x as f32, HEIGHT, 1.0, LIGHTGRAY)
-        }
-
-        for y in (1..HEIGHT as i32).step_by((1.0 / RESOLUTION) as usize) {
-            draw_line(0.0 as f32, y as f32, WIDTH, y as f32, 1.0, LIGHTGRAY)
-        }
-
-        for robot in self.robots.iter() {
-            robot.draw(Self::tf_function);
-        }
-
-        for artist in self.artists.iter() {
-            artist.draw(Self::tf_function);
-        }
-    }
-
-    pub fn draw_equi_comps(&self) {
-        egui_macroquad::ui(|egui_ctx| {
-            Window::new("Robot Information").show(egui_ctx, |ui| {
-                for robot in self.robots.iter() {
-                    ui.label(format!("Robot: {}", robot.id.to_owned()));
-                    ui.label(format!(
-                        "Pose: {x}, {y}, {t}",
-                        x = robot.pose.0,
-                        y = robot.pose.1,
-                        t = robot.pose.2
-                    ));
-                }
-            });
-        });
-
-        // Draw things before egui
-
-        egui_macroquad::draw();
-    }
-
-    pub fn render(&mut self, data: &zmq::Message) {
-        let config = get_config_from_string(String::from(std::str::from_utf8(&data).unwrap()));
-
-        self.from_config(&config);
-
-        self.draw();
-
-        self.draw_equi_comps();
-
-        // Draw Egui stuff here
-    }
-}

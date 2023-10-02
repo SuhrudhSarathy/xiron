@@ -88,6 +88,65 @@ impl Drawable for StaticObj {
             GRAY,
         );
     }
+
+    fn draw_bounds(&self, tf: fn((f32, f32)) -> (f32, f32)) {
+        let w = self.width * 0.5 + 0.25;
+        let h = self.height * 0.5 + 0.25;
+
+        let c = self.rotation.cos();
+        let s = self.rotation.sin();
+
+        let x1 = self.center.0 + w * c - h * s;
+        let y1 = self.center.1 + w * s + h * c;
+
+        let x2 = self.center.0 - w * c - h * s;
+        let y2 = self.center.1 - w * s + h * c;
+
+        let x3 = self.center.0 - w * c + h * s;
+        let y3 = self.center.1 - w * s - h * c;
+
+        let x4 = self.center.0 + w * c + h * s;
+        let y4 = self.center.1 + w * s - h * c;
+
+        let tf_p1 = tf((x1, y1));
+        let tf_p2 = tf((x2, y2));
+        let tf_p3 = tf((x3, y3));
+        let tf_p4 = tf((x4, y4));
+
+        // Draw the body
+        draw_triangle_lines(
+            Vec2 {
+                x: tf_p1.0,
+                y: tf_p1.1,
+            },
+            Vec2 {
+                x: tf_p2.0,
+                y: tf_p2.1,
+            },
+            Vec2 {
+                x: tf_p3.0,
+                y: tf_p3.1,
+            },
+            5.0,
+            GREEN,
+        );
+        draw_triangle_lines(
+            Vec2 {
+                x: tf_p1.0,
+                y: tf_p1.1,
+            },
+            Vec2 {
+                x: tf_p3.0,
+                y: tf_p3.1,
+            },
+            Vec2 {
+                x: tf_p4.0,
+                y: tf_p4.1,
+            },
+            5.0,
+            GREEN,
+        );
+    }
 }
 
 impl GuiObject for StaticObj {
