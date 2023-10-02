@@ -21,9 +21,10 @@ pub struct Pose {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LaserScan {
+    pub robot_id: String,
     pub angle_min: f32,
     pub angle_max: f32,
-    pub num_readings: u32,
+    pub num_readings: i32,
     pub values: Vec<f32>,
 }
 

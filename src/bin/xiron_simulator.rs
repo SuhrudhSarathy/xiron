@@ -14,7 +14,7 @@ async fn main() {
     pose_publisher.bind("tcp://127.0.0.1:5555".to_string());
 
     let scan_publisher = Publisher::new(&context, "scan".to_string());
-    scan_publisher.bind("tcp://127.0.0.1:5555".to_string());
+    scan_publisher.bind("tcp://127.0.0.1:5858".to_string());
 
     let (string_sender, string_reciever) = std::sync::mpsc::channel();
     let vel_subscriber = Subscriber::new(&context, Duration::from_millis(100), string_sender);
@@ -29,7 +29,7 @@ async fn main() {
     let sim_handler_mutex = Arc::new(Mutex::new(sim_handler));
     let sim_handler_mutex_clone = Arc::clone(&sim_handler_mutex);
     let mut egui_handler = EguiInterface::new(sender, save_sender, sim_handler_mutex);
-
+    let mut last_sent_time: Option<f64> = None;
     loop {
         clear_background(WHITE);
 
@@ -81,37 +81,106 @@ async fn main() {
 
         egui_macroquad::draw();
 
-        {
-            let mut sh = sim_handler_mutex_clone.lock().unwrap();
-            for robot_name in egui_handler.robot_name_map.keys() {
-                let handler = egui_handler.get_robot_handler(robot_name);
-                match handler {
-                    Some(robot) => {
-                        let pose = sh.get_pose(&robot);
-                        let pose_msg = Pose {
-                            robot_id: robot_name.clone(),
-                            position: (pose.0, pose.1),
-                            orientation: pose.2,
-                        };
-                        pose_publisher.send(&pose_msg);
-                    }
-                    None => {}
-                }
-            }
+        let time_now = get_time();
+        match last_sent_time {
+            None => {
+                last_sent_time = Some(get_time());
+                let mut sh = sim_handler_mutex_clone.lock().unwrap();
+                for robot_name in egui_handler.robot_name_map.keys() {
+                    let handler = egui_handler.get_robot_handler(robot_name);
+                    match handler {
+                        Some(robot) => {
+                            let pose = sh.get_pose(&robot);
+                            let pose_msg = Pose {
+                                robot_id: robot_name.clone(),
+                                position: (pose.0, pose.1),
+                                orientation: pose.2,
+                            };
+                            pose_publisher.send(&pose_msg);
 
-            let output = string_reciever.try_recv();
-            match output {
-                Ok(output) => {
-                    let twist_command: Twist = serde_json::from_str(&output.to_string()).unwrap();
-                    let robot_handler = egui_handler.get_robot_handler(&twist_command.robot_id);
-                    match robot_handler {
+                            let scan = sh.sense(&robot);
+                            let scan_msg = LaserScan {
+                                robot_id: robot_name.clone(),
+                                angle_min: scan.angle_min,
+                                angle_max: scan.angle_max,
+                                num_readings: scan.num_readings,
+                                values: scan.values,
+                            };
+                            scan_publisher.send(&scan_msg);
+                        }
                         None => {}
-                        Some(handler) => {
-                            sh.control(&handler, (twist_command.linear.0, twist_command.angular));
+                    }
+                }
+
+                let output = string_reciever.try_recv();
+                match output {
+                    Ok(output) => {
+                        let twist_command: Twist =
+                            serde_json::from_str(&output.to_string()).unwrap();
+                        let robot_handler = egui_handler.get_robot_handler(&twist_command.robot_id);
+                        match robot_handler {
+                            None => {}
+                            Some(handler) => {
+                                sh.control(
+                                    &handler,
+                                    (twist_command.linear.0, twist_command.angular),
+                                );
+                            }
                         }
                     }
+                    Err(_error) => {}
                 }
-                Err(_error) => {}
+            }
+            Some(t_last) => {
+                if (time_now - t_last) > (1.0 / DATA_SEND_FREQ_SEC) {
+                    last_sent_time = Some(get_time());
+                    let mut sh = sim_handler_mutex_clone.lock().unwrap();
+                    for robot_name in egui_handler.robot_name_map.keys() {
+                        let handler = egui_handler.get_robot_handler(robot_name);
+                        match handler {
+                            Some(robot) => {
+                                let pose = sh.get_pose(&robot);
+                                let pose_msg = Pose {
+                                    robot_id: robot_name.clone(),
+                                    position: (pose.0, pose.1),
+                                    orientation: pose.2,
+                                };
+                                pose_publisher.send(&pose_msg);
+
+                                let scan = sh.sense(&robot);
+                                let scan_msg = LaserScan {
+                                    robot_id: robot_name.clone(),
+                                    angle_min: scan.angle_min,
+                                    angle_max: scan.angle_max,
+                                    num_readings: scan.num_readings,
+                                    values: scan.values,
+                                };
+                                scan_publisher.send(&scan_msg);
+                            }
+                            None => {}
+                        }
+                    }
+
+                    let output = string_reciever.try_recv();
+                    match output {
+                        Ok(output) => {
+                            let twist_command: Twist =
+                                serde_json::from_str(&output.to_string()).unwrap();
+                            let robot_handler =
+                                egui_handler.get_robot_handler(&twist_command.robot_id);
+                            match robot_handler {
+                                None => {}
+                                Some(handler) => {
+                                    sh.control(
+                                        &handler,
+                                        (twist_command.linear.0, twist_command.angular),
+                                    );
+                                }
+                            }
+                        }
+                        Err(_error) => {}
+                    }
+                }
             }
         }
 
