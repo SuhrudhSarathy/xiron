@@ -28,6 +28,7 @@ pub fn xiron() -> Conf {
         window_title: "Xiron".to_owned(),
         window_height: HEIGHT as i32,
         window_width: WIDTH as i32,
+        fullscreen: false,
         ..Default::default()
     }
 }

@@ -1,8 +1,5 @@
 use std::iter::zip;
 
-use egui_macroquad::egui::*;
-use macroquad::prelude::*;
-
 use crate::behaviour::traits::{Collidable, Drawable};
 use crate::object::robot::Robot;
 use crate::object::sensors::LiDARMsg;
@@ -10,6 +7,9 @@ use crate::object::static_obj::StaticObj;
 use crate::object::wall::Wall;
 use crate::parameter::*;
 use crate::parser::*;
+use crate::prelude::traits::{Genericbject, GuiObject};
+use crate::prelude::Footprint;
+use macroquad::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
 pub struct RobotHandler {
@@ -22,10 +22,25 @@ impl RobotHandler {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub enum SelectedObjectType {
+    Robot,
+    Other,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, PartialOrd)]
+pub enum ObjectParameterType {
+    Position(f32, f32),
+    Rotation(f32),
+    Bounds(f32, f32),
+}
+
 pub struct SimulationHandler {
     robots: Vec<Robot>,
-    objects: Vec<Box<dyn Collidable>>,
-    artists: Vec<Box<dyn Drawable>>,
+    objects: Vec<Box<dyn Genericbject>>,
+
+    walls: Vec<Wall>,
+    static_objects: Vec<StaticObj>,
 
     filepath: String,
 }
@@ -35,7 +50,9 @@ impl SimulationHandler {
         return SimulationHandler {
             robots: Vec::new(),
             objects: Vec::new(),
-            artists: Vec::new(),
+
+            walls: Vec::new(),
+            static_objects: Vec::new(),
             filepath: "".to_string(),
         };
     }
@@ -65,18 +82,26 @@ impl SimulationHandler {
         }
 
         for obj in config.static_objects.iter() {
-            sim_handle.add_static_obj(StaticObj::new(obj.center, obj.width, obj.height));
+            sim_handle.add_static_obj(StaticObj::new(
+                obj.center,
+                obj.width,
+                obj.height,
+                obj.rotation,
+            ));
         }
 
         return (sim_handle, robot_handles);
     }
-
     pub fn load_file_path(&mut self, path: String) {
         self.filepath = path.clone();
     }
 
     pub fn reset(&mut self) {
         self.robots.clear();
+        self.objects.clear();
+
+        self.walls.clear();
+        self.static_objects.clear();
 
         let config = get_config_from_file(self.filepath.to_owned());
         for robot in config.robots.iter() {
@@ -88,10 +113,33 @@ impl SimulationHandler {
                 robot.footprint.clone(),
             ));
         }
+
+        for wall in config.walls.iter() {
+            self.add_wall(Wall::new(wall.endpoints.clone()));
+        }
+
+        for obj in config.static_objects.iter() {
+            self.add_static_obj(StaticObj::new(
+                obj.center,
+                obj.width,
+                obj.height,
+                obj.rotation,
+            ));
+        }
     }
 
     pub fn add_robot(&mut self, robot: Robot) -> (String, RobotHandler) {
         let name = robot.id.clone();
+
+        println!(
+            "
+        Added robot with name : {}. Radius: {}, Center: {}, {}",
+            name,
+            robot.get_bounds().0,
+            robot.get_center().0,
+            robot.get_center().1
+        );
+
         self.robots.push(robot);
 
         return (
@@ -104,12 +152,16 @@ impl SimulationHandler {
 
     pub fn add_wall(&mut self, wall: Wall) {
         self.objects.push(Box::new(wall.clone()));
-        self.artists.push(Box::new(wall.clone()));
+
+        println!("\n{:?}\n added", wall.coords);
+
+        self.walls.push(wall.clone());
     }
 
     pub fn add_static_obj(&mut self, obj: StaticObj) {
         self.objects.push(Box::new(obj.clone()));
-        self.artists.push(Box::new(obj.clone()));
+
+        self.static_objects.push(obj.clone());
     }
 
     pub fn control(&mut self, robot: &RobotHandler, control: (f32, f32)) {
@@ -117,11 +169,161 @@ impl SimulationHandler {
     }
 
     pub fn sense(&self, robot: &RobotHandler) -> LiDARMsg {
-        return self.robots[robot.id].sense(&self.objects);
+        let mut collidables_vector = Vec::new();
+        for obj in self.objects.iter() {
+            collidables_vector.push(obj.get_collidable());
+        }
+        return self.robots[robot.id].sense(&collidables_vector);
     }
 
     pub fn get_pose(&self, robot: &RobotHandler) -> (f32, f32, f32) {
         return self.robots[robot.id].pose;
+    }
+
+    pub fn get_nearest_object(&self, x: f32, y: f32) -> (Option<SelectedObjectType>, i32) {
+        // First check all robots
+        let mut selected_object_type = None;
+        let mut nearest_index: i32 = -1;
+
+        for i in 0..self.robots.len() {
+            let robot = self.robots[i].clone();
+            let (rx, ry) = (robot.pose.0, robot.pose.1);
+
+            match robot.shape {
+                Footprint::Circular(r) => {
+                    if (rx - x).abs() < r.radius && (ry - y).abs() < r.radius {
+                        selected_object_type = Some(SelectedObjectType::Robot);
+                        nearest_index = i as i32;
+
+                        return (selected_object_type, nearest_index);
+                    }
+                }
+
+                Footprint::Rectangular(c) => {
+                    if (rx - x).abs() < c.half_extents.x && (ry - y).abs() < c.half_extents.y {
+                        selected_object_type = Some(SelectedObjectType::Robot);
+                        nearest_index = i as i32;
+
+                        return (selected_object_type, nearest_index);
+                    }
+                }
+            }
+        }
+
+        // Now check for generic objects
+        // This might not work really well for Walls. We dont what to do anything for walls as of now.
+        for i in 0..self.objects.len() {
+            let object = self.objects[i].as_ref();
+
+            if (x - object.get_pose().0).abs() < object.get_bounds().0
+                && (y - object.get_pose().1).abs() < object.get_bounds().1
+            {
+                selected_object_type = Some(SelectedObjectType::Other);
+                nearest_index = i as i32;
+
+                return (selected_object_type, nearest_index);
+            }
+        }
+
+        return (selected_object_type, nearest_index);
+    }
+
+    pub fn get_parameters_of_selected_object(
+        &self,
+        selected_object: (Option<SelectedObjectType>, i32),
+        parameter_type: ObjectParameterType,
+    ) -> ObjectParameterType {
+        let (selected_type, index) = selected_object;
+
+        match selected_type {
+            Some(t) => match t {
+                SelectedObjectType::Robot => match parameter_type {
+                    ObjectParameterType::Bounds(_w, _h) => {
+                        let bounds = self.robots[index as usize].get_bounds();
+                        return ObjectParameterType::Bounds(bounds.0, bounds.1);
+                    }
+                    ObjectParameterType::Rotation(_angle) => {
+                        let angle = self.robots[index as usize].get_rotation();
+                        return ObjectParameterType::Rotation(angle);
+                    }
+                    ObjectParameterType::Position(_x, _y) => {
+                        let position = self.robots[index as usize].get_center();
+
+                        return ObjectParameterType::Position(position.0, position.1);
+                    }
+                },
+                SelectedObjectType::Other => match parameter_type {
+                    ObjectParameterType::Bounds(_w, _h) => {
+                        let bounds = self.objects[index as usize].get_bounds();
+
+                        return ObjectParameterType::Bounds(bounds.0, bounds.1);
+                    }
+                    ObjectParameterType::Rotation(_angle) => {
+                        let angle = self.objects[index as usize].get_rotation();
+                        return ObjectParameterType::Rotation(angle);
+                    }
+                    ObjectParameterType::Position(_x, _y) => {
+                        let position = self.objects[index as usize].get_center();
+                        return ObjectParameterType::Position(position.0, position.1);
+                    }
+                },
+            },
+            None => {
+                return ObjectParameterType::Rotation(0.0);
+            }
+        }
+    }
+
+    pub fn change_parameters_of_selected_object(
+        &mut self,
+        selected_object: (Option<SelectedObjectType>, i32),
+        parameter_type: ObjectParameterType,
+    ) {
+        let (selected_type, index) = selected_object;
+
+        match selected_type {
+            Some(t) => match t {
+                SelectedObjectType::Robot => match parameter_type {
+                    ObjectParameterType::Bounds(w, h) => {
+                        self.robots[index as usize].modify_bounds(w, h)
+                    }
+                    ObjectParameterType::Rotation(angle) => {
+                        self.robots[index as usize].modify_rotation(angle)
+                    }
+                    ObjectParameterType::Position(x, y) => {
+                        self.robots[index as usize].modify_position(x, y)
+                    }
+                },
+                SelectedObjectType::Other => match parameter_type {
+                    ObjectParameterType::Bounds(w, h) => {
+                        self.objects[index as usize].modify_bounds(w, h)
+                    }
+                    ObjectParameterType::Rotation(angle) => {
+                        self.objects[index as usize].modify_rotation(angle)
+                    }
+                    ObjectParameterType::Position(x, y) => {
+                        self.objects[index as usize].modify_position(x, y)
+                    }
+                },
+            },
+            None => {}
+        }
+    }
+
+    pub fn delete_selected_object(&mut self, selected_object: (Option<SelectedObjectType>, i32)) {
+        let (selected_type, index) = selected_object;
+
+        match selected_type {
+            Some(t) => match t {
+                SelectedObjectType::Other => {
+                    let _val = self.objects.remove(index as usize);
+                }
+                SelectedObjectType::Robot => {
+                    let _val = self.robots.remove(index as usize);
+                }
+            },
+            None => {}
+        }
     }
 
     // TODO: Check if this can be simplified
@@ -141,7 +343,8 @@ impl SimulationHandler {
 
             // Object Collisions
             for object in self.objects.iter() {
-                object_collision = robot.collision_check_at(object.as_ref(), &next_pose);
+                object_collision =
+                    robot.collision_check_at(&(*object.get_collidable()), &next_pose);
                 if object_collision {
                     break;
                 }
@@ -173,7 +376,7 @@ impl SimulationHandler {
     pub fn collision_status_at(&self, roboth: &RobotHandler, pose: &(f32, f32, f32)) -> bool {
         let robot = self.robots[roboth.id].clone();
         for object in self.objects.iter() {
-            let collision = robot.collision_check_at(object.as_ref(), pose);
+            let collision = robot.collision_check_at(&*object.get_collidable(), pose);
             if collision {
                 return true;
             }
@@ -187,148 +390,150 @@ impl SimulationHandler {
             robot_config_vectors.push(robot.into_config());
         }
 
+        let mut wall_config_vector: Vec<WallConfig> = Vec::new();
+
+        for wall in self.walls.iter() {
+            wall_config_vector.push(WallConfig {
+                endpoints: wall.coords.clone(),
+            });
+        }
+
+        let mut static_objects_config: Vec<StaticObjConfig> = Vec::new();
+
+        for obj in self.static_objects.iter() {
+            static_objects_config.push(StaticObjConfig {
+                center: obj.center.clone(),
+                width: obj.width,
+                height: obj.height,
+                rotation: obj.rotation,
+            });
+        }
+
         Config {
             robots: robot_config_vectors,
-            walls: Vec::new(),
-            static_objects: Vec::new(),
+            walls: wall_config_vector,
+            static_objects: static_objects_config,
         }
     }
 
+    pub fn draw_lines(&self) {
+        let _one_meter_step = Self::inverse_scale_function(1.0);
+
+        let mut x = XLIMS.0;
+        let mut y = YLIMS.0;
+
+        while x < screen_width() {
+            let init_coord = Self::tf_function((x, YLIMS.0));
+            let final_coord = Self::tf_function((x, screen_height()));
+            draw_line(
+                init_coord.0,
+                init_coord.1,
+                final_coord.0 as f32,
+                final_coord.1,
+                1.0,
+                LIGHTGRAY,
+            );
+
+            x += 1.0;
+        }
+
+        while y < screen_height() {
+            let init_coord = Self::tf_function((XLIMS.0, y));
+            let final_coord = Self::tf_function((screen_width(), y));
+            draw_line(
+                init_coord.0,
+                init_coord.1,
+                final_coord.0 as f32,
+                final_coord.1,
+                1.0,
+                LIGHTGRAY,
+            );
+
+            y += 1.0;
+        }
+
+        // Draw origin
+        let origin_coord = (0.0, 0.0);
+        let one_meter_in_x = (1.0, 0.0);
+        let one_meter_in_y = (0.0, 1.0);
+
+        let origin_in_pixel_frame = Self::tf_function(origin_coord);
+        let one_meterx_in_pixel_frame = Self::tf_function(one_meter_in_x);
+        let one_metery_in_pixel_frame = Self::tf_function(one_meter_in_y);
+
+        draw_line(
+            origin_in_pixel_frame.0,
+            origin_in_pixel_frame.1,
+            one_meterx_in_pixel_frame.0,
+            one_meterx_in_pixel_frame.1,
+            2.0,
+            GREEN,
+        );
+
+        draw_line(
+            origin_in_pixel_frame.0,
+            origin_in_pixel_frame.1,
+            one_metery_in_pixel_frame.0,
+            one_metery_in_pixel_frame.1,
+            2.0,
+            RED,
+        );
+    }
     pub fn draw(&self) {
-        for x in (1..WIDTH as i32).step_by((1.0 / RESOLUTION) as usize) {
-            draw_line(x as f32, 0.0, x as f32, HEIGHT, 1.0, LIGHTGRAY)
-        }
-
-        for y in (1..HEIGHT as i32).step_by((1.0 / RESOLUTION) as usize) {
-            draw_line(0.0 as f32, y as f32, WIDTH, y as f32, 1.0, LIGHTGRAY)
-        }
-
         for robot in self.robots.iter() {
             robot.draw(Self::tf_function);
         }
 
-        for artist in self.artists.iter() {
-            artist.draw(Self::tf_function);
+        for object in self.objects.iter() {
+            object.draw(Self::tf_function);
         }
     }
 
-    fn tf_function(pos: (f32, f32)) -> (f32, f32) {
+    pub fn draw_bounds_of_selected_object(
+        &self,
+        selected_object: (Option<SelectedObjectType>, i32),
+    ) {
+        let (selected_object_type, index) = selected_object;
+        match selected_object_type {
+            Some(object) => match object {
+                SelectedObjectType::Robot => {
+                    self.robots[index as usize].draw_bounds(Self::tf_function);
+                }
+                SelectedObjectType::Other => {
+                    self.objects[index as usize].draw_bounds(Self::tf_function);
+                }
+            },
+            None => {}
+        }
+    }
+
+    /// get pixel coordinate from World
+    pub fn tf_function(pos: (f32, f32)) -> (f32, f32) {
         let i = (pos.0 - XLIMS.0) / RESOLUTION;
         let j = (YLIMS.1 - pos.1) / RESOLUTION;
 
         return (i, j);
+    }
+
+    /// Get World coordinate from Pixel
+    pub fn get_world_from_pixel(px: f32, py: f32) -> (f32, f32) {
+        let wx = XLIMS.0 + px * RESOLUTION;
+        let wy = YLIMS.1 - py * RESOLUTION;
+
+        return (wx, wy);
+    }
+
+    /// Gives scale in world frame
+    pub fn scale_function(value: f32) -> f32 {
+        return value * RESOLUTION;
+    }
+
+    /// Gives scale in pixel map frame
+    pub fn inverse_scale_function(value: f32) -> f32 {
+        return value / RESOLUTION;
     }
 }
 
 unsafe impl Sync for SimulationHandler {}
 
 unsafe impl Send for SimulationHandler {}
-
-pub struct RenderingHandler {
-    robots: Vec<Robot>,
-    artists: Vec<Box<dyn Drawable>>,
-}
-
-impl RenderingHandler {
-    fn tf_function(pos: (f32, f32)) -> (f32, f32) {
-        let i = (pos.0 - XLIMS.0) / RESOLUTION;
-        let j = (YLIMS.1 - pos.1) / RESOLUTION;
-
-        return (i, j);
-    }
-
-    pub fn new() -> RenderingHandler {
-        return RenderingHandler {
-            robots: Vec::new(),
-            artists: Vec::new(),
-        };
-    }
-
-    pub fn from_file(&mut self, filepath: String) {
-        let config = get_config_from_file(filepath);
-
-        for robot in config.robots.iter() {
-            self.robots.push(Robot::new(
-                robot.id.clone(),
-                robot.pose,
-                robot.vel,
-                robot.lidar,
-                robot.footprint.clone(),
-            ));
-        }
-
-        for wall in config.walls.iter() {
-            self.artists
-                .push(Box::new(Wall::new(wall.endpoints.clone())));
-        }
-
-        for obj in config.static_objects.iter() {
-            self.artists
-                .push(Box::new(StaticObj::new(obj.center, obj.width, obj.height)));
-        }
-    }
-
-    pub fn from_config(&mut self, config: &Config) {
-        // Here we are assuming that the robots are in the same order
-        // and hence, we go with a iterator without any search.
-        // Later on, we can solve this using some hashmap
-
-        for i in 0..config.robots.len() {
-            let robot_config = &config.robots[i];
-            let robot = &mut self.robots[i];
-
-            robot.update_from_config(robot_config);
-        }
-    }
-
-    pub fn draw(&self) {
-        // Draw vertical lines throughout the location
-        for x in (1..WIDTH as i32).step_by((1.0 / RESOLUTION) as usize) {
-            draw_line(x as f32, 0.0, x as f32, HEIGHT, 1.0, LIGHTGRAY)
-        }
-
-        for y in (1..HEIGHT as i32).step_by((1.0 / RESOLUTION) as usize) {
-            draw_line(0.0 as f32, y as f32, WIDTH, y as f32, 1.0, LIGHTGRAY)
-        }
-
-        for robot in self.robots.iter() {
-            robot.draw(Self::tf_function);
-        }
-
-        for artist in self.artists.iter() {
-            artist.draw(Self::tf_function);
-        }
-    }
-
-    pub fn draw_equi_comps(&self) {
-        egui_macroquad::ui(|egui_ctx| {
-            Window::new("Robot Information").show(egui_ctx, |ui| {
-                for robot in self.robots.iter() {
-                    ui.label(format!("Robot: {}", robot.id.to_owned()));
-                    ui.label(format!(
-                        "Pose: {x}, {y}, {t}",
-                        x = robot.pose.0,
-                        y = robot.pose.1,
-                        t = robot.pose.2
-                    ));
-                }
-            });
-        });
-
-        // Draw things before egui
-
-        egui_macroquad::draw();
-    }
-
-    pub fn render(&mut self, data: &zmq::Message) {
-        let config = get_config_from_string(String::from(std::str::from_utf8(&data).unwrap()));
-
-        self.from_config(&config);
-
-        self.draw();
-
-        self.draw_equi_comps();
-
-        // Draw Egui stuff here
-    }
-}
