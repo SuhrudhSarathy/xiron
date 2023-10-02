@@ -25,14 +25,14 @@ cargo build --release
 # Xiron-Simulator
 The main simulator is a binary. To run the binary
 ```
-cargo run --bin
+cargo run --bin xiron_simulator
 ```
 
 # Roadmap
 The Roadmap is mentioned in the [Projects](https://github.com/SuhrudhSarathy/xiron/projects) section.
 
 # Documentation
-The main documentation and How to Use guide can be found [here]()
+The main documentation and How to Use guide can be found [here](https://suhrudhsarathy.github.io/xiron/)
 # References
 1. Rust Language Reference: https://www.rust-lang.org
 2. gRPC: https://grpc.io
