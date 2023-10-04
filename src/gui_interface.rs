@@ -194,14 +194,14 @@ impl EguiInterface {
 
             ui.menu_button("Help", |ui| {
                 let _general_help =
-                    ui.hyperlink_to("General", "https://github.com/SuhrudhSarathy/xiron");
+                    ui.hyperlink_to("General", "https://suhrudhsarathy.github.io/xiron/");
                 let _interface_help = ui.hyperlink_to(
                     "Python Interface",
-                    "https://github.com/SuhrudhSarathy/xiron",
+                    "https://suhrudhsarathy.github.io/xiron/user_guide/python_interface/",
                 );
                 ui.separator();
                 let _documentation_button =
-                    ui.hyperlink_to("Documentation", "https://github.com/SuhrudhSarathy/xiron");
+                    ui.hyperlink_to("Code ", "https://github.com/SuhrudhSarathy/xiron");
             });
         });
     }
