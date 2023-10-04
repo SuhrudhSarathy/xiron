@@ -294,10 +294,10 @@ impl EguiInterface {
                         let p1 = vector[i + 1];
 
                         // Draw a line for this
-                        draw_line(p0.0, p0.1, p1.0, p1.1, 2.0, BLACK);
+                        draw_line(p0.0, p0.1, p1.0, p1.1, 8.0, BLACK);
                     }
                     let p0 = vector[vector.len() - 1];
-                    draw_line(p0.0, p0.1, mx, my, 2.0, BLACK);
+                    draw_line(p0.0, p0.1, mx, my, 8.0, BLACK);
 
                     if is_mouse_button_pressed(MouseButton::Left) {
                         vector.push((mx, my));

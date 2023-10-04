@@ -33,7 +33,7 @@ impl Drawable for Wall {
             let c1_tfed = tf(c1);
             let c2_tfed = tf(c2);
 
-            draw_line(c1_tfed.0, c1_tfed.1, c2_tfed.0, c2_tfed.1, 3.0, BLACK);
+            draw_line(c1_tfed.0, c1_tfed.1, c2_tfed.0, c2_tfed.1, 8.0, BLACK);
         }
     }
     fn draw_bounds(&self, _tf: fn((f32, f32)) -> (f32, f32)) {}
