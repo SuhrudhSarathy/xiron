@@ -266,7 +266,7 @@ impl EguiInterface {
         });
     }
 
-    /// Draws the selected objects to screen and also updates teh Simulation handler when clicked.
+    /// Draws the selected objects to screen and also updates the Simulation handler when clicked.
     fn add_selected_objects_to_canvas(&mut self) {
         let (mx, my) = mouse_position();
         let mut sh = self.sim_handler.lock().unwrap();
