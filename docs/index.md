@@ -23,4 +23,3 @@ Some great alternatives that provide simple 2D robot simulations </br>
 
 ## Contributions
 Feel free to contribute to the project. Take a look at the [Contributor's Guide](./contributions.md) for more information.
-    

@@ -247,6 +247,7 @@ impl Drawable for Robot {
                 let r = b.radius;
                 let tf_pos = tf((self.pose.0, self.pose.1));
                 draw_circle_lines(tf_pos.0, tf_pos.1, (r + 0.25) / RESOLUTION, 5.0, GREEN);
+                draw_text(&self.id, tf_pos.0 + 0.5, tf_pos.1 + 0.5, 14.0, BLACK);
             }
 
             Footprint::Rectangular(r) => {
@@ -316,6 +317,7 @@ impl Drawable for Robot {
                 let tf_pos = tf((self.pose.0, self.pose.1));
                 let tf2_pos = tf((x2, y2));
 
+                draw_text(&self.id, tf_pos.0 + 0.5, tf_pos.1 + 0.5, 14.0, BLACK);
                 draw_line(tf_pos.0, tf_pos.1, tf2_pos.0, tf2_pos.1, 2.0, RED);
             }
         }
