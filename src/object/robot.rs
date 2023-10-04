@@ -245,9 +245,15 @@ impl Drawable for Robot {
         match self.shape {
             Footprint::Circular(b) => {
                 let r = b.radius;
+
+                let x2: f32 = self.pose.0 + r * self.pose.2.cos();
+                let y2: f32 = self.pose.1 + r * self.pose.2.sin();
+
                 let tf_pos = tf((self.pose.0, self.pose.1));
+                let tf2_pos = tf((x2, y2));
+
                 draw_circle_lines(tf_pos.0, tf_pos.1, (r + 0.25) / RESOLUTION, 5.0, GREEN);
-                draw_text(&self.id, tf_pos.0 + 0.5, tf_pos.1 + 0.5, 14.0, BLACK);
+                draw_text(&self.id, tf2_pos.0 + 1.5, tf2_pos.1 + 1.5, 14.0, BLACK);
             }
 
             Footprint::Rectangular(r) => {
@@ -276,37 +282,40 @@ impl Drawable for Robot {
                 let tf_p4 = tf((x4, y4));
 
                 // Draw the body
-                draw_triangle_lines(
-                    Vec2 {
-                        x: tf_p1.0,
-                        y: tf_p1.1,
-                    },
-                    Vec2 {
-                        x: tf_p2.0,
-                        y: tf_p2.1,
-                    },
-                    Vec2 {
-                        x: tf_p3.0,
-                        y: tf_p3.1,
-                    },
-                    15.0,
+                draw_line(
+                    tf_p1.0 + 0.5,
+                    tf_p1.1 + 0.5,
+                    tf_p2.0 + 0.5,
+                    tf_p2.1 + 0.5,
+                    5.0,
                     GREEN,
                 );
-                draw_triangle_lines(
-                    Vec2 {
-                        x: tf_p1.0,
-                        y: tf_p1.1,
-                    },
-                    Vec2 {
-                        x: tf_p3.0,
-                        y: tf_p3.1,
-                    },
-                    Vec2 {
-                        x: tf_p4.0,
-                        y: tf_p4.1,
-                    },
-                    15.0,
-                    BLACK,
+
+                draw_line(
+                    tf_p2.0 + 0.5,
+                    tf_p2.1 + 0.5,
+                    tf_p3.0 + 0.5,
+                    tf_p3.1 + 0.5,
+                    5.0,
+                    GREEN,
+                );
+
+                draw_line(
+                    tf_p3.0 + 0.5,
+                    tf_p3.1 + 0.5,
+                    tf_p4.0 + 0.5,
+                    tf_p4.1 + 0.5,
+                    5.0,
+                    GREEN,
+                );
+
+                draw_line(
+                    tf_p4.0 + 0.5,
+                    tf_p4.1 + 0.5,
+                    tf_p1.0 + 0.5,
+                    tf_p1.1 + 0.5,
+                    5.0,
+                    GREEN,
                 );
 
                 // Draw the angle
@@ -317,7 +326,7 @@ impl Drawable for Robot {
                 let tf_pos = tf((self.pose.0, self.pose.1));
                 let tf2_pos = tf((x2, y2));
 
-                draw_text(&self.id, tf_pos.0 + 0.5, tf_pos.1 + 0.5, 14.0, BLACK);
+                draw_text(&self.id, tf2_pos.0 + 1.5, tf2_pos.1 + 1.5, 14.0, BLACK);
                 draw_line(tf_pos.0, tf_pos.1, tf2_pos.0, tf2_pos.1, 2.0, RED);
             }
         }

@@ -114,35 +114,38 @@ impl Drawable for StaticObj {
         let tf_p4 = tf((x4, y4));
 
         // Draw the body
-        draw_triangle_lines(
-            Vec2 {
-                x: tf_p1.0,
-                y: tf_p1.1,
-            },
-            Vec2 {
-                x: tf_p2.0,
-                y: tf_p2.1,
-            },
-            Vec2 {
-                x: tf_p3.0,
-                y: tf_p3.1,
-            },
+        draw_line(
+            tf_p1.0 + 0.5,
+            tf_p1.1 + 0.5,
+            tf_p2.0 + 0.5,
+            tf_p2.1 + 0.5,
             5.0,
             GREEN,
         );
-        draw_triangle_lines(
-            Vec2 {
-                x: tf_p1.0,
-                y: tf_p1.1,
-            },
-            Vec2 {
-                x: tf_p3.0,
-                y: tf_p3.1,
-            },
-            Vec2 {
-                x: tf_p4.0,
-                y: tf_p4.1,
-            },
+
+        draw_line(
+            tf_p2.0 + 0.5,
+            tf_p2.1 + 0.5,
+            tf_p3.0 + 0.5,
+            tf_p3.1 + 0.5,
+            5.0,
+            GREEN,
+        );
+
+        draw_line(
+            tf_p3.0 + 0.5,
+            tf_p3.1 + 0.5,
+            tf_p4.0 + 0.5,
+            tf_p4.1 + 0.5,
+            5.0,
+            GREEN,
+        );
+
+        draw_line(
+            tf_p4.0 + 0.5,
+            tf_p4.1 + 0.5,
+            tf_p1.0 + 0.5,
+            tf_p1.1 + 0.5,
             5.0,
             GREEN,
         );
