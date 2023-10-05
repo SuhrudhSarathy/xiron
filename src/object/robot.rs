@@ -1,6 +1,7 @@
 use macroquad::prelude::*;
 use parry2d::math::Vector;
 use parry2d::shape::{Ball, Cuboid};
+use serde::{Deserialize, Serialize};
 
 use crate::behaviour::traits::{Drawable, GuiObject};
 use crate::parameter::{DT, RESOLUTION};
@@ -16,6 +17,19 @@ pub enum Footprint {
     Rectangular(Cuboid),
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, Copy)]
+pub enum DriveType {
+    Differential,
+    Ackermann,
+    Omnidrive,
+}
+
+impl Default for DriveType {
+    fn default() -> Self {
+        Self::Differential
+    }
+}
+
 #[derive(Debug, Clone)]
 pub struct Robot {
     pub id: String,
@@ -27,6 +41,9 @@ pub struct Robot {
 
     // Robot shall have a Vector of Sensables
     pub lidar: Vec<LiDAR>,
+
+    pub drive_type: DriveType,
+    pub add_noise: bool,
 }
 
 impl Robot {
@@ -36,6 +53,8 @@ impl Robot {
         vel: (f32, f32),
         lidar_present: bool,
         footprint: Vec<f32>,
+        drive_type: DriveType,
+        add_noise: bool,
     ) -> Robot {
         if footprint.len() == 1 {
             let fshape = Footprint::Circular(Ball {
@@ -49,6 +68,8 @@ impl Robot {
                     vel: vel,
                     shape: fshape,
                     lidar: vec![LiDAR::new(pose)],
+                    drive_type: drive_type,
+                    add_noise: add_noise,
                 };
             }
 
@@ -58,6 +79,8 @@ impl Robot {
                 vel: vel,
                 shape: fshape,
                 lidar: Vec::new(),
+                drive_type: drive_type,
+                add_noise: add_noise,
             };
         } else {
             let width = footprint[0] * 0.5;
@@ -73,6 +96,8 @@ impl Robot {
                     vel: vel,
                     shape: fshape,
                     lidar: vec![LiDAR::new(pose)],
+                    drive_type: drive_type,
+                    add_noise: add_noise,
                 };
             }
 
@@ -82,6 +107,8 @@ impl Robot {
                 vel: vel,
                 shape: fshape,
                 lidar: Vec::new(),
+                drive_type: drive_type,
+                add_noise: add_noise,
             };
         }
     }
@@ -93,6 +120,8 @@ impl Robot {
             vel: (0.0, 0.0),
             shape: Footprint::Circular(Ball { radius: radius }),
             lidar: vec![LiDAR::new(pose)],
+            drive_type: DriveType::Differential,
+            add_noise: false,
         }
     }
 
@@ -151,6 +180,8 @@ impl Robot {
             vel: self.vel,
             lidar: lidar,
             footprint: extents,
+            drive_type: self.drive_type,
+            add_noise: self.add_noise,
         }
     }
 }

@@ -73,6 +73,8 @@ impl SimulationHandler {
                 robot.vel,
                 robot.lidar,
                 robot.footprint.clone(),
+                robot.drive_type,
+                robot.add_noise,
             ));
             robot_handles.push(handle);
         }
@@ -111,6 +113,8 @@ impl SimulationHandler {
                 robot.vel,
                 robot.lidar,
                 robot.footprint.clone(),
+                robot.drive_type,
+                robot.add_noise,
             ));
         }
 
