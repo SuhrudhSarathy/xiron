@@ -2,6 +2,8 @@ use serde::{Deserialize, Serialize};
 use serde_json;
 use serde_yaml;
 
+use crate::prelude::DriveType;
+
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct WallConfig {
     pub endpoints: Vec<(f32, f32)>,
@@ -22,6 +24,8 @@ pub struct RobotConfig {
     pub vel: (f32, f32),
     pub lidar: bool,
     pub footprint: Vec<f32>,
+    pub drive_type: DriveType,
+    pub add_noise: bool,
 }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
