@@ -1,5 +1,6 @@
 use crate::behaviour::traits::{Collidable, Sensable};
 use crate::object::sensors::*;
+use rand::prelude::*;
 
 impl Sensable for LiDAR {
     type OutputMsg = LiDARMsg;
@@ -20,8 +21,11 @@ impl Sensable for LiDAR {
                     min_dist = dist;
                 }
             }
+            // Add random noise between +/- 5cm
+            let mut rand_noise_gen = rand::thread_rng();
+            let random_val = rand_noise_gen.gen_range(-0.05..0.05);
 
-            values.push(min_dist);
+            values.push(min_dist + random_val);
         }
 
         LiDARMsg {
