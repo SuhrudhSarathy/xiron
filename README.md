@@ -5,7 +5,7 @@
 </p>
 
 # Xiron
-A lightweight 2D robot simulator written in Rust.
+A lightweight 2D robot simulator written in Rust. The main documentation and How to Use guide can be found [here](https://suhrudhsarathy.github.io/xiron/)
 
 # Dependencies
 1. Install the Rust Programming language : https://www.rust-lang.org/tools/install
@@ -28,9 +28,3 @@ cargo run --bin xiron_simulator
 
 # Roadmap
 The Roadmap is mentioned in the [Projects](https://github.com/SuhrudhSarathy/xiron/projects) section.
-
-# Documentation
-The main documentation and How to Use guide can be found [here](https://suhrudhsarathy.github.io/xiron/)
-# References
-1. Rust Language Reference: https://www.rust-lang.org
-2. gRPC: https://grpc.io
