@@ -1,12 +1,15 @@
+extern crate rand;
+
 use macroquad::prelude::*;
 use parry2d::math::Vector;
 use parry2d::shape::{Ball, Cuboid};
+use rand::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::behaviour::traits::{Drawable, GuiObject};
 use crate::parameter::{DT, RESOLUTION};
+use crate::parser::RobotConfig;
 use crate::prelude::traits::{Collidable, Genericbject, Sensable};
-use crate::prelude::RobotConfig;
 use crate::utils::normalise;
 
 use super::sensors::{LiDAR, LiDARMsg};
@@ -144,6 +147,16 @@ impl Robot {
             _ => {
                 self.vel = vel;
             }
+        }
+
+        if self.add_noise {
+            // Add some noise to the velocities
+            let mut rand_gen = rand::thread_rng();
+            let v_noise = rand_gen.gen_range(-0.01..0.01);
+            let w_noise = rand_gen.gen_range(-0.01..0.01);
+
+            self.vel.0 += v_noise;
+            self.vel.1 += w_noise;
         }
     }
 
