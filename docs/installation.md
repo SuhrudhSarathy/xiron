@@ -1,7 +1,7 @@
 # Installation
 There are two modes of Installation.
 ### 1. Binaries
-You can directly download the simulator from the binaries and execute them. The binaries are available [here]()
+You can directly download the simulator from the binaries and execute them. The binaries are available [here](https://github.com/SuhrudhSarathy/xiron/releases/tag/v0.2.0). Make sure to provide executable permissions for the same.
 
 ### 2. Source Installation
 #### a. Dependencies Installation
