@@ -54,6 +54,14 @@
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="./">Python Interface</a>
     <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#dependencies">Dependencies</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#installation">Installation</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#usage">Usage</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#datatypes">Datatypes</a>
+    </li>
     </ul>
                   </li>
               </ul>
@@ -97,6 +105,93 @@
             <div class="section" itemprop="articleBody">
               
                 <h1 id="python-interface">Python Interface</h1>
+<p>To interact with the simulation and send control commands to the robot(s), the Python Interface <code>xiron_py</code> can be used.</p>
+<h3 id="dependencies">Dependencies</h3>
+<ol>
+<li>Make sure you have python installed on your system. Python can be installed from <a href="https://www.python.org/downloads/">here</a></li>
+<li>Install pip to manage dependencies. Instructions are available <a href="https://pip.pypa.io/en/stable/installation/">here</a></li>
+</ol>
+<h3 id="installation">Installation</h3>
+<ol>
+<li>Use pip to install the module. To install it directly from github:</li>
+</ol>
+<pre><code>pip install git+https://github.com/SuhrudhSarathy/xironpy.git
+</code></pre>
+<ol>
+<li>To install from source, clone the repository and use pip to install</li>
+</ol>
+<pre><code>git clone https://github.com/SuhrudhSarathy/xironpy.git
+</code></pre>
+<pre><code>cd xironpy
+pip install -e .
+</code></pre>
+<h2 id="usage">Usage</h2>
+<p>A simple example demonstating the use of callback function to gather scan and pose data and use velocity publisher to send control commands is shown below.</p>
+<pre><code class="language-python">from xiron_py.comms import XironContext
+from xiron_py.data import Twist
+from time import sleep
+
+
+def scan_callback(msg):
+    print(f&quot;Recieved Scan message: {msg}&quot;)
+
+
+def pose_callback(msg):
+    print(f&quot;Recieved Pose message: {msg}&quot;)
+
+
+if __name__ == &quot;__main__&quot;:
+    # Create a context object
+    ctx = XironContext()
+
+    # Create the Velocity publisher for robot0
+    vel_pub = ctx.create_vel_publisher(&quot;robot0&quot;)
+
+    # Create the Scan Subscriber and add callback function
+    ctx.create_scan_subscriber(&quot;robot0&quot;, scan_callback)
+
+    # Create the Pose Subscriber and add callback function
+    ctx.create_pose_subscriber(&quot;robot0&quot;, pose_callback)
+
+    twist_message = Twist(&quot;robot0&quot;, [0.1, 0.0], 0.1)
+    for i in range(100):
+        vel_pub.publish(twist_message)
+        print(&quot;Publihsed vel: &quot;, i)
+        sleep(0.1)
+
+    twist_message = Twist(&quot;robot0&quot;, [0.0, 0.0], 0.0)
+    vel_pub.publish(twist_message)
+
+    print(&quot;Done!&quot;)
+
+</code></pre>
+<h2 id="datatypes">Datatypes</h2>
+<p>Information about <code>Pose</code>, <code>LaserScan</code> data and <code>Twist</code> (velocity) of the robot are passed via the python dataclasses below.</p>
+<pre><code class="language-python">
+@dataclass
+class Twist:
+    robot_id: str
+    linear: tuple[float, float]
+    angular: float
+
+
+@dataclass
+class Pose:
+    robot_id: str
+    position: tuple[float, float]
+    orientation: float
+
+
+@dataclass
+class LaserScan:
+    robot_id: str
+    angle_min: float
+    angle_max: float
+    num_readings: int
+    values: List[float]
+
+</code></pre>
+<p>The source code for <code>xiron_py</code> is hosted <a href="https://github.com/suhrudhSarathy/xironpy">here</a>.</p>
               
             </div>
           </div><footer>
