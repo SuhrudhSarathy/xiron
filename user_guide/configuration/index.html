@@ -49,6 +49,20 @@
               <p class="caption"><span class="caption-text">User Guide</span></p>
               <ul class="current">
                   <li class="toctree-l1 current"><a class="reference internal current" href="./">Configuration</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#three-categories-of-objects">Three categories of objects</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#configuring-a-robot">Configuring a Robot</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#configuring-a-static-object">Configuring a Static Object</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#configuring-a-wall">Configuring a Wall</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#note">Note</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../gui_usage/">GUI usage</a>
                   </li>
@@ -60,6 +74,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../../advanced/robot_model/">Customising Robot Model</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../../advanced/multi_robot_usage/">Multi Robot Usage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../../advanced/rust_interface/">Rust Interface</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Contributor's Guide</span></p>
@@ -92,7 +108,212 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                
+                <h1 id="configuring-the-simulator">Configuring the Simulator</h1>
+<p>The configuration of the Simulator's state is done through the use of YAML files. Below is an example of a sample YAML file.</p>
+<pre><code class="language-yaml">robots:
+- id: robot0
+  pose:
+  - -6.295703
+  - 7.076855
+  - 0.0
+  vel:
+  - 0.0
+  - 0.0
+  lidar: true
+  footprint:
+  - 0.25
+  drive_type: Differential
+  add_noise: false
+- id: robot1
+  pose:
+  - -4.0486326
+  - 4.9811525
+  - 0.0
+  vel:
+  - 0.0
+  - 0.0
+  lidar: true
+  footprint:
+  - 0.25
+  drive_type: Differential
+  add_noise: false
+walls:
+- endpoints:
+  - - -9.1560545
+    - 8.704004
+  - - -1.0940428
+    - 8.6789055
+  - - -0.99091816
+    - 3.9499025
+  - - -9.038574
+    - 4.1187496
+- endpoints:
+  - - 1.0652351
+    - 8.664355
+  - - 1.0892582
+    - 4.006152
+  - - 9.079687
+    - 4.0520506
+static_objects:
+- center:
+  - 2.2917004
+  - 6.981738
+  width: 0.625
+  height: 0.625
+  rotation: 0.0
+- center:
+  - 7.0378914
+  - 6.6941404
+  width: 0.625
+  height: 0.625
+  rotation: 0.0
+- center:
+  - 0.020019531
+  - 2.6319332
+  width: 0.625
+  height: 0.625
+  rotation: 0.0
+
+</code></pre>
+<h2 id="three-categories-of-objects">Three categories of objects</h2>
+<p>There are three main categories of Objects used in the Simulator, <code>Robot</code>, <code>Static Object</code>, <code>Wall</code>. The configuration for each of these is described differently.</p>
+<p>In general, the YAML can be split as a combination of these categories as below</p>
+<pre><code class="language-yaml">robots:
+    - ...
+    - ...
+    - ...
+walls:
+    - ...
+    - ...
+    - ...
+static_objects:
+    - ...
+    - ...
+    - ...
+</code></pre>
+<h2 id="configuring-a-robot">Configuring a Robot</h2>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Description</th>
+<th>Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>id</code></td>
+<td>Describes the <code>id</code> of the Robot.</td>
+<td><code>string</code></td>
+</tr>
+<tr>
+<td><code>pose</code></td>
+<td>Describes the <code>pose</code> of the Robot. This is a tuple of [<code>x</code>, <code>y</code>, <code>yaw</code>].</td>
+<td>Tuple of [<code>x</code>, <code>y</code>, <code>yaw</code>]</td>
+</tr>
+<tr>
+<td><code>vel</code></td>
+<td>Describes the <code>velocity</code> of the Robot. Varies according to drive type:<br>Differential drive: <code>[vx, vy]</code><br>Omnidirectional drive: velocity in x and y direction<br>Ackermann drive: linear velocity and steering angle.</td>
+<td>Varies according to drive type:<br>Differential drive: <code>[vx, vy]</code><br>Omnidirectional drive: velocity in x and y direction<br>Ackermann drive: linear velocity and steering angle.</td>
+</tr>
+<tr>
+<td><code>lidar</code></td>
+<td>Describes the presence of a lidar.</td>
+<td><code>bool</code></td>
+</tr>
+<tr>
+<td><code>footprint</code></td>
+<td>Describes the footprint. If <code>float</code>, the shape of the robot is circular with the given number as radius. If a tuple of <code>float</code>, the first number is taken as width and the second number as height.</td>
+<td><code>float</code> or Tuple of <code>float</code></td>
+</tr>
+<tr>
+<td><code>drive_type</code></td>
+<td>Describes the drive type. Can be <code>Differential</code>, <code>OmniDirectional</code>, or <code>Ackermann</code>.</td>
+<td><code>string</code></td>
+</tr>
+<tr>
+<td><code>add_noise</code></td>
+<td>Adds noise to the kinematics model.</td>
+<td><code>bool</code></td>
+</tr>
+</tbody>
+</table>
+<p>An example YAML configuration with <code>Ackermann</code> drive and Rectangular Footprint is given below</p>
+<pre><code class="language-yaml">
+- id: robot1
+  pose:
+    - -4.825901
+    - 8.391234
+    - 0.35
+  vel:
+    - 1.5
+    - 0.0
+  lidar: true
+  footprint:
+    - 0.4
+    - 1.2
+  drive_type: Ackermann
+  add_noise: true
+
+</code></pre>
+<h2 id="configuring-a-static-object">Configuring a Static Object</h2>
+<p>Here's a table generated from the YAML data:</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Description</th>
+<th>Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>static_objects</td>
+<td>List of static objects</td>
+<td>List of objects</td>
+</tr>
+<tr>
+<td>center</td>
+<td>Center coordinates of the object</td>
+<td>Tuple of [<code>x</code>, <code>y</code>]</td>
+</tr>
+<tr>
+<td>width</td>
+<td>Width of the object</td>
+<td><code>float</code></td>
+</tr>
+<tr>
+<td>height</td>
+<td>Height of the object</td>
+<td><code>float</code></td>
+</tr>
+<tr>
+<td>rotation</td>
+<td>Rotation of the object</td>
+<td><code>float</code></td>
+</tr>
+</tbody>
+</table>
+<p>In this table, I've represented the YAML data as a table with property names, descriptions, and data types for each field.</p>
+<h2 id="configuring-a-wall">Configuring a Wall</h2>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Description</th>
+<th>Data Type</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>endpoints</td>
+<td>List of endpoint coordinates</td>
+<td>List of Tuples of XY coordinates of vertices</td>
+</tr>
+</tbody>
+</table>
+<h3 id="note">Note</h3>
+<p>It is highly recommended to create a starting configuration using the <a href="../gui_usage/">GUI</a> and edit the specifics from the YAML file.</p>
               
             </div>
           </div><footer>

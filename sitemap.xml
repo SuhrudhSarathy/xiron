@@ -2,42 +2,47 @@
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
     <url>
          <loc>https://suhrudhsarathy.github.io/xiron/</loc>
-         <lastmod>2023-10-02</lastmod>
+         <lastmod>2023-10-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://suhrudhsarathy.github.io/xiron/contributions/</loc>
-         <lastmod>2023-10-02</lastmod>
+         <lastmod>2023-10-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://suhrudhsarathy.github.io/xiron/installation/</loc>
-         <lastmod>2023-10-02</lastmod>
+         <lastmod>2023-10-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://suhrudhsarathy.github.io/xiron/advanced/multi_robot_usage/</loc>
-         <lastmod>2023-10-02</lastmod>
+         <lastmod>2023-10-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://suhrudhsarathy.github.io/xiron/advanced/robot_model/</loc>
-         <lastmod>2023-10-02</lastmod>
+         <lastmod>2023-10-24</lastmod>
+         <changefreq>daily</changefreq>
+    </url>
+    <url>
+         <loc>https://suhrudhsarathy.github.io/xiron/advanced/rust_interface/</loc>
+         <lastmod>2023-10-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://suhrudhsarathy.github.io/xiron/user_guide/configuration/</loc>
-         <lastmod>2023-10-02</lastmod>
+         <lastmod>2023-10-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://suhrudhsarathy.github.io/xiron/user_guide/gui_usage/</loc>
-         <lastmod>2023-10-02</lastmod>
+         <lastmod>2023-10-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
     <url>
          <loc>https://suhrudhsarathy.github.io/xiron/user_guide/python_interface/</loc>
-         <lastmod>2023-10-02</lastmod>
+         <lastmod>2023-10-24</lastmod>
          <changefreq>daily</changefreq>
     </url>
 </urlset>

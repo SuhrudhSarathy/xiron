@@ -44,6 +44,20 @@
                   <li class="toctree-l1"><a class="reference internal" href="..">Home</a>
                   </li>
                   <li class="toctree-l1 current"><a class="reference internal current" href="./">Installation</a>
+    <ul class="current">
+    <li class="toctree-l2"><a class="reference internal" href="#1-binaries">1. Binaries</a>
+    </li>
+    <li class="toctree-l2"><a class="reference internal" href="#2-source-installation">2. Source Installation</a>
+        <ul>
+    <li class="toctree-l3"><a class="reference internal" href="#a-dependencies-installation">a. Dependencies Installation</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#b-source-code">b. Source Code</a>
+    </li>
+    <li class="toctree-l3"><a class="reference internal" href="#c-build-library-and-simulator">c. Build Library and Simulator</a>
+    </li>
+        </ul>
+    </li>
+    </ul>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">User Guide</span></p>
@@ -60,6 +74,8 @@
                   <li class="toctree-l1"><a class="reference internal" href="../advanced/robot_model/">Customising Robot Model</a>
                   </li>
                   <li class="toctree-l1"><a class="reference internal" href="../advanced/multi_robot_usage/">Multi Robot Usage</a>
+                  </li>
+                  <li class="toctree-l1"><a class="reference internal" href="../advanced/rust_interface/">Rust Interface</a>
                   </li>
               </ul>
               <p class="caption"><span class="caption-text">Contributor's Guide</span></p>
@@ -92,7 +108,55 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
             <div class="section" itemprop="articleBody">
               
-                
+                <h1 id="installation">Installation</h1>
+<p>There are two modes of Installation.</p>
+<h3 id="1-binaries">1. Binaries</h3>
+<p>You can directly download the simulator from the binaries and execute them. The binaries are available <a href="">here</a></p>
+<h3 id="2-source-installation">2. Source Installation</h3>
+<h4 id="a-dependencies-installation">a. Dependencies Installation</h4>
+<ul>
+<li>
+<p>Install the Rust Programming language from their <a href="https://www.rust-lang.org/learn/get-started">official website</a></p>
+</li>
+<li>
+<p>On Linux, you need to first run:</p>
+</li>
+</ul>
+<pre><code>sudo apt-get install -y libclang-dev libgtk-3-dev libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libxkbcommon-dev libssl-dev
+</code></pre>
+<ul>
+<li>On Fedora Rawhide, you need to run</li>
+</ul>
+<pre><code>dnf install clang clang-devel clang-tools-extra libxkbcommon-devel pkg-config openssl-devel libxcb-devel gtk3-devel atk fontconfig-devel
+</code></pre>
+<p>There are no dependencies apart from Rust for <code>Windows</code> and <code>Mac</code>.</p>
+<p>To install from source, you will need to install the Rust Programming language.</p>
+<h4 id="b-source-code">b. Source Code</h4>
+<p>Clone the source code from Github</p>
+<pre><code>git clone https://github.com/SuhrudhSarathy/xiron.git
+</code></pre>
+<h4 id="c-build-library-and-simulator">c. Build Library and Simulator</h4>
+<ol>
+<li>To build the library and simulator run:</li>
+</ol>
+<pre><code>cargo build
+</code></pre>
+<p>By default, this will build the library and simulator in debug mode. To build in release mode,</p>
+<pre><code>cargo build --release
+</code></pre>
+<ol>
+<li>
+<p>The built simulator can be found as a binary in the <code>target/debug</code> or <code>target/release</code> folder depending on whether the build was in debug mode or release mode.</p>
+</li>
+<li>
+<p>You can also run the simulator using cargo with</p>
+</li>
+</ol>
+<pre><code>cargo run --bin xiron_simulator
+</code></pre>
+<p>This runs the simulator in debug mode. To run in release mode,</p>
+<pre><code>cargo run --bin xiron_simulator --release
+</code></pre>
               
             </div>
           </div><footer>
