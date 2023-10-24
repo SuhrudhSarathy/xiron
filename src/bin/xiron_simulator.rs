@@ -81,11 +81,30 @@ async fn main() {
 
         egui_macroquad::draw();
 
+        // Check if there were any velocity messages to process.
+        {
+            let mut sh = sim_handler_mutex_clone.lock().unwrap();
+            let output = string_reciever.try_recv();
+            match output {
+                Ok(output) => {
+                    let twist_command: Twist = serde_json::from_str(&output.to_string()).unwrap();
+                    let robot_handler = egui_handler.get_robot_handler(&twist_command.robot_id);
+                    match robot_handler {
+                        None => {}
+                        Some(handler) => {
+                            sh.control(&handler, (twist_command.linear.0, twist_command.angular));
+                        }
+                    }
+                }
+                Err(_error) => {}
+            }
+        }
+
         let time_now = get_time();
         match last_sent_time {
             None => {
                 last_sent_time = Some(get_time());
-                let mut sh = sim_handler_mutex_clone.lock().unwrap();
+                let sh = sim_handler_mutex_clone.lock().unwrap();
                 for robot_name in egui_handler.robot_name_map.keys() {
                     let handler = egui_handler.get_robot_handler(robot_name);
                     match handler {
@@ -111,33 +130,13 @@ async fn main() {
                         None => {}
                     }
                 }
-
-                // Check if there were any velocity messages to process.
-                let output = string_reciever.try_recv();
-                match output {
-                    Ok(output) => {
-                        let twist_command: Twist =
-                            serde_json::from_str(&output.to_string()).unwrap();
-                        let robot_handler = egui_handler.get_robot_handler(&twist_command.robot_id);
-                        match robot_handler {
-                            None => {}
-                            Some(handler) => {
-                                sh.control(
-                                    &handler,
-                                    (twist_command.linear.0, twist_command.angular),
-                                );
-                            }
-                        }
-                    }
-                    Err(_error) => {}
-                }
             }
 
             // Publish the Scan data and Pose data for each robot present.
             Some(t_last) => {
-                if (time_now - t_last) > (1.0 / DATA_SEND_FREQ_SEC) {
+                if (time_now - t_last) > (1.0 / DATA_SEND_FREQ) {
                     last_sent_time = Some(get_time());
-                    let mut sh = sim_handler_mutex_clone.lock().unwrap();
+                    let sh = sim_handler_mutex_clone.lock().unwrap();
                     for robot_name in egui_handler.robot_name_map.keys() {
                         let handler = egui_handler.get_robot_handler(robot_name);
                         match handler {
@@ -162,26 +161,6 @@ async fn main() {
                             }
                             None => {}
                         }
-                    }
-
-                    let output = string_reciever.try_recv();
-                    match output {
-                        Ok(output) => {
-                            let twist_command: Twist =
-                                serde_json::from_str(&output.to_string()).unwrap();
-                            let robot_handler =
-                                egui_handler.get_robot_handler(&twist_command.robot_id);
-                            match robot_handler {
-                                None => {}
-                                Some(handler) => {
-                                    sh.control(
-                                        &handler,
-                                        (twist_command.linear.0, twist_command.angular),
-                                    );
-                                }
-                            }
-                        }
-                        Err(_error) => {}
                     }
                 }
             }
