@@ -1,8 +1,6 @@
 <p align="center">
-    <img src="images/logo.png" 
+    <img src="images/xiron.png" 
         alt="Picture" 
-        width="200" 
-        height="200" 
         style="display: block; margin: 0 auto" />
 </p>
 
