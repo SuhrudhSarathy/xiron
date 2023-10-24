@@ -126,15 +126,57 @@ impl Robot {
     }
 
     pub fn control(&mut self, vel: (f32, f32)) {
-        self.vel = vel;
+        match self.drive_type {
+            // For Ackermann type, the control we get is (acceleration, steering_angle) and not velocity.
+            // Here self.vel = (v, theta_dot) that is the first derivative of postion and angle.
+            DriveType::Ackermann => {
+                let bounds = self.get_bounds();
+
+                // Consider the length here
+                let l = bounds.1;
+
+                // v = v + a * dt
+                self.vel.0 = self.vel.0 + vel.0 * DT;
+
+                // w = w + v * tan(delta)/l
+                self.vel.1 = self.vel.1 + self.vel.0 * self.vel.1.tan() / l;
+            }
+            _ => {
+                self.vel = vel;
+            }
+        }
     }
 
     pub fn next(&mut self) -> (f32, f32, f32) {
-        let theta = normalise(self.pose.2 + self.vel.1 * DT);
-        let x = self.pose.0 + self.vel.0 * self.pose.2.cos() * DT;
-        let y = self.pose.1 + self.vel.0 * self.pose.2.sin() * DT;
+        match self.drive_type {
+            DriveType::Differential => {
+                let theta = normalise(self.pose.2 + self.vel.1 * DT);
+                let x = self.pose.0 + self.vel.0 * self.pose.2.cos() * DT;
+                let y = self.pose.1 + self.vel.0 * self.pose.2.sin() * DT;
 
-        return (x, y, theta);
+                return (x, y, theta);
+            }
+
+            DriveType::Omnidrive => {
+                let theta = self.pose.2;
+                let x = self.pose.0 + self.vel.0 * DT;
+                let y = self.pose.1 + self.vel.1 * DT;
+
+                return (x, y, theta);
+            }
+            // If the Footprint is Circular, the length is considered as 2*r, else its the length
+            DriveType::Ackermann => {
+                // Split the controls into (a, delta). These have been computed earlier
+                let v = self.vel.0;
+                let omega = self.vel.1;
+
+                let theta = normalise(self.pose.2 + omega * DT);
+                let x = self.pose.0 + v * self.pose.2.cos() * DT;
+                let y = self.pose.1 + v * self.pose.2.sin() * DT;
+
+                return (x, y, theta);
+            }
+        }
     }
 
     pub fn step(&mut self, next: &(f32, f32, f32)) {
