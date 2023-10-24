@@ -157,6 +157,8 @@ impl GuiObject for StaticObj {
         self.width = width;
         self.height = height;
 
+        self.shape = Cuboid::new(Vector::new(self.width * 0.5, self.height * 0.5));
+
         println!("Set bounds: {}, {}", self.width, self.height);
     }
 
