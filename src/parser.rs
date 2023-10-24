@@ -57,12 +57,20 @@ pub struct PositionArray {
     pub positions: Vec<Position>,
 }
 
-pub fn get_config_from_file(path: String) -> Config {
-    let file = std::fs::File::open(path).expect("File not openable");
-    let config: Config =
-        serde_yaml::from_reader(file).expect("Couldn't read config file. Rewrite properly");
+pub fn get_config_from_file(path: String) -> Option<Config> {
+    let file_result = std::fs::File::open(path);
+    match file_result {
+        Ok(file) => {
+            let config: Config =
+                serde_yaml::from_reader(file).expect("Couldn't read config file. Rewrite properly");
 
-    return config;
+            return Some(config);
+        }
+        Err(e) => {
+            println!("Error in opening file: {}", e);
+            return None;
+        }
+    }
 }
 
 pub fn get_config_to_string(config: Config) -> String {
