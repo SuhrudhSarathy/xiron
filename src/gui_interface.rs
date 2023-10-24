@@ -119,6 +119,13 @@ impl EguiInterface {
                 }
 
                 if reset_simulation_button.clicked() {
+                    // Reset all variables
+                    self.nearest_object_index = (None, -1);
+                    self.clicked_mode = Mode::None;
+                    self.object_select_mode = ObjectSelectMode::None;
+                    self.robot_handlers.clear();
+                    self.robot_name_map.clear();
+
                     let mut sh = self.sim_handler.lock().unwrap();
                     sh.reset();
                 }

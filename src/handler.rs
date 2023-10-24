@@ -66,30 +66,35 @@ impl SimulationHandler {
 
         let mut robot_handles = Vec::new();
 
-        for robot in config.robots.iter() {
-            let handle = sim_handle.add_robot(Robot::new(
-                robot.id.clone(),
-                robot.pose,
-                robot.vel,
-                robot.lidar,
-                robot.footprint.clone(),
-                robot.drive_type,
-                robot.add_noise,
-            ));
-            robot_handles.push(handle);
-        }
+        match config {
+            Some(config) => {
+                for robot in config.robots.iter() {
+                    let handle = sim_handle.add_robot(Robot::new(
+                        robot.id.clone(),
+                        robot.pose,
+                        robot.vel,
+                        robot.lidar,
+                        robot.footprint.clone(),
+                        robot.drive_type,
+                        robot.add_noise,
+                    ));
+                    robot_handles.push(handle);
+                }
 
-        for wall in config.walls.iter() {
-            sim_handle.add_wall(Wall::new(wall.endpoints.clone()));
-        }
+                for wall in config.walls.iter() {
+                    sim_handle.add_wall(Wall::new(wall.endpoints.clone()));
+                }
 
-        for obj in config.static_objects.iter() {
-            sim_handle.add_static_obj(StaticObj::new(
-                obj.center,
-                obj.width,
-                obj.height,
-                obj.rotation,
-            ));
+                for obj in config.static_objects.iter() {
+                    sim_handle.add_static_obj(StaticObj::new(
+                        obj.center,
+                        obj.width,
+                        obj.height,
+                        obj.rotation,
+                    ));
+                }
+            }
+            None => {}
         }
 
         return (sim_handle, robot_handles);
@@ -105,30 +110,34 @@ impl SimulationHandler {
         self.walls.clear();
         self.static_objects.clear();
 
-        let config = get_config_from_file(self.filepath.to_owned());
-        for robot in config.robots.iter() {
-            let _handle = self.add_robot(Robot::new(
-                robot.id.clone(),
-                robot.pose,
-                robot.vel,
-                robot.lidar,
-                robot.footprint.clone(),
-                robot.drive_type,
-                robot.add_noise,
-            ));
-        }
+        let config_return = get_config_from_file(self.filepath.to_owned());
+        match config_return {
+            Some(config) => {
+                for robot in config.robots.iter() {
+                    let _handle = self.add_robot(Robot::new(
+                        robot.id.clone(),
+                        robot.pose,
+                        robot.vel,
+                        robot.lidar,
+                        robot.footprint.clone(),
+                        robot.drive_type,
+                        robot.add_noise,
+                    ));
+                    for wall in config.walls.iter() {
+                        self.add_wall(Wall::new(wall.endpoints.clone()));
+                    }
 
-        for wall in config.walls.iter() {
-            self.add_wall(Wall::new(wall.endpoints.clone()));
-        }
-
-        for obj in config.static_objects.iter() {
-            self.add_static_obj(StaticObj::new(
-                obj.center,
-                obj.width,
-                obj.height,
-                obj.rotation,
-            ));
+                    for obj in config.static_objects.iter() {
+                        self.add_static_obj(StaticObj::new(
+                            obj.center,
+                            obj.width,
+                            obj.height,
+                            obj.rotation,
+                        ));
+                    }
+                }
+            }
+            None => {}
         }
     }
 
