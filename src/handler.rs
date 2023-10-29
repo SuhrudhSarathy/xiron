@@ -103,7 +103,7 @@ impl SimulationHandler {
         self.filepath = path.clone();
     }
 
-    pub fn reset(&mut self) {
+    pub fn reset(&mut self) -> Vec<(String, RobotHandler)> {
         self.robots.clear();
         self.objects.clear();
 
@@ -113,8 +113,9 @@ impl SimulationHandler {
         let config_return = get_config_from_file(self.filepath.to_owned());
         match config_return {
             Some(config) => {
+                let mut all_robot_handlers: Vec<(String, RobotHandler)> = Vec::new();
                 for robot in config.robots.iter() {
-                    let _handle = self.add_robot(Robot::new(
+                    let handle = self.add_robot(Robot::new(
                         robot.id.clone(),
                         robot.pose,
                         robot.vel,
@@ -123,6 +124,8 @@ impl SimulationHandler {
                         robot.drive_type,
                         robot.add_noise,
                     ));
+
+                    all_robot_handlers.push(handle);
                     for wall in config.walls.iter() {
                         self.add_wall(Wall::new(wall.endpoints.clone()));
                     }
@@ -136,8 +139,12 @@ impl SimulationHandler {
                         ));
                     }
                 }
+
+                return all_robot_handlers;
             }
-            None => {}
+            None => {
+                return Vec::new();
+            }
         }
     }
 
