@@ -88,6 +88,13 @@ impl EguiInterface {
         }
     }
 
+    pub fn reset_robot_handlers(&mut self, robot_handlers: Vec<(String, RobotHandler)>) {
+        for (name, handler) in robot_handlers.iter() {
+            self.robot_handlers.push(handler.clone());
+            self.robot_name_map.insert(name.clone(), handler.clone());
+        }
+    }
+
     /// Main function for rendinering Egui Elements on the screen
     pub fn show_elements(&mut self, ctx: &egui::Context) {
         TopBottomPanel::top("FileEditViewBar")
@@ -127,7 +134,12 @@ impl EguiInterface {
                     self.robot_name_map.clear();
 
                     let mut sh = self.sim_handler.lock().unwrap();
-                    sh.reset();
+                    let robot_handlers = sh.reset();
+
+                    // Drop sh to make take ownership of self
+                    drop(sh);
+
+                    self.reset_robot_handlers(robot_handlers);
                 }
 
                 if save_config_button.clicked() {

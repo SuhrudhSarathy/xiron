@@ -38,7 +38,8 @@ async fn main() {
                 println!("Got Open message here: {}", message);
                 let mut sh = sim_handler_mutex_clone.lock().unwrap();
                 sh.load_file_path(message);
-                sh.reset();
+                let robot_handlers = sh.reset();
+                egui_handler.reset_robot_handlers(robot_handlers);
             }
             Err(_) => {}
         }
