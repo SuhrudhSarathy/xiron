@@ -480,7 +480,12 @@ impl EguiInterface {
                     ui.label(format!("Made with {} by Suhrudh", "♡"));
                 },
             );
+            let (mx, my) = mouse_position();
+            let (wx, wy) = SimulationHandler::get_world_from_pixel(mx, my);
+
             ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {
+                ui.label(format!("{:0.4},{:0.4}", wx, wy));
+                ui.separator();
                 ui.label(format!("FPS: {}", get_fps()));
                 ui.separator();
                 ui.label(format!("Elapsed Time: {:.3}s", get_time()));
