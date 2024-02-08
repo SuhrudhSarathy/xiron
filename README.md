@@ -15,7 +15,7 @@ A lightweight 2D robot simulator written in Rust. The main documentation and How
 ```
 git clone https://github.com/SuhrudhSarathy/xiron.git
 ```
-2. Use `cargo` to build
+2. Use `cargo` to build the library along with the binary
 ```
 cargo build --release
 ```
@@ -24,6 +24,14 @@ cargo build --release
 The main simulator is a binary. To run the binary
 ```
 cargo run --bin xiron_simulator
+```
+Also, to install the Simulator and use it globally:
+```
+cargo install --path .   
+```
+Make sure you are inside the `xiron` directory. This builds the binary and places it in `$HOME/.cargo/bin` folder. Make sure that `PATH` is set properly. After this, open up a new terminal and run the simulator using the command:
+```
+xiron_simulator
 ```
 
 # Roadmap
