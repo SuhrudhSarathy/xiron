@@ -10,7 +10,7 @@ A lightweight 2D robot simulator written in Rust. The main documentation and How
 # Dependencies
 1. Install the Rust Programming language : https://www.rust-lang.org/tools/install
 
-# Installation
+# Installation from source
 1. Clone the repository
 ```
 git clone https://github.com/SuhrudhSarathy/xiron.git
