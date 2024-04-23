@@ -3,6 +3,7 @@ name = "xiron"
 version = "0.3.0"
 edition = "2021"
 license = "MIT"
+description = "A lightweight 2D robot simulator written in Rust."
 
 [dependencies]
 parry2d = "0.12.0"
