@@ -1,4 +1,3 @@
-use futures::channel::mpsc::Receiver;
 use macroquad::prelude::*;
 use serde_json::Error;
 use std::sync::{Arc, Mutex};
@@ -8,7 +7,7 @@ use xiron::prelude::*;
 
 #[macroquad::main(xiron)]
 async fn main() {
-    println!("This will be the new simulator");
+    println!("Xiron Simulator!");
 
     let context = zmq::Context::new();
 
