@@ -1,4 +1,6 @@
+use futures::channel::mpsc::Receiver;
 use macroquad::prelude::*;
+use serde_json::Error;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use xiron::comms::Twist;
@@ -21,6 +23,12 @@ async fn main() {
 
     vel_subscriber.bind("vel".to_string(), "tcp://127.0.0.1:5556".to_string());
     vel_subscriber.spin();
+
+    let (reset_sender, reset_reciever) = std::sync::mpsc::channel();
+    let reset_subscriber = Subscriber::new(&context, Duration::from_millis(100), reset_sender);
+
+    reset_subscriber.bind("reset".to_string(), "tcp://127.0.0.1:5956".to_string());
+    reset_subscriber.spin();
 
     let (sender, reciever) = std::sync::mpsc::channel();
     let (save_sender, save_reciever) = std::sync::mpsc::channel();
@@ -88,17 +96,35 @@ async fn main() {
             let output = string_reciever.try_recv();
             match output {
                 Ok(output) => {
-                    let twist_command: Twist = serde_json::from_str(&output.to_string()).unwrap();
-                    let robot_handler = egui_handler.get_robot_handler(&twist_command.robot_id);
-                    match robot_handler {
-                        None => {}
-                        Some(handler) => {
-                            sh.control(&handler, (twist_command.linear.0, twist_command.angular));
+                    let twist_command_result: Result<Twist, Error>= serde_json::from_str(&output.to_string());
+                    match twist_command_result{
+                        Ok(twist_command) => {
+                            let robot_handler = egui_handler.get_robot_handler(&twist_command.robot_id);
+                            match robot_handler {
+                                None => {}
+                                Some(handler) => {
+                                    sh.control(&handler, (twist_command.linear.0, twist_command.angular));
+                                }
+                            }
+                        }
+                        Err(err) => {
+                            println!("Got Error in parsing velocities: {err}");
                         }
                     }
                 }
                 Err(_error) => {}
             }
+        }
+
+        // Check for reset request
+        let reset_output = reset_reciever.try_recv();
+        match reset_output
+        {
+            Ok(_output) => {
+                println!("Resetting Environment");
+                egui_handler.reset();
+            }
+            Err(_error) => {}
         }
 
         let time_now = get_time();
