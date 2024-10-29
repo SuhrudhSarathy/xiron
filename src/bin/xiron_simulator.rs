@@ -5,6 +5,8 @@ use std::time::Duration;
 use xiron::comms::Twist;
 use xiron::prelude::*;
 
+use std::env::args;
+
 #[macroquad::main(xiron)]
 async fn main() {
     println!("Xiron Simulator!");
@@ -47,6 +49,23 @@ async fn main() {
     let sim_handler_mutex_clone = Arc::clone(&sim_handler_mutex);
     let mut egui_handler = EguiInterface::new(sender, save_sender, sim_handler_mutex);
     let mut last_sent_time: Option<f64> = None;
+
+    // Parse the CLI args for file path
+    let file_path_arg = std::env::args().nth(1);
+    match file_path_arg {
+        Some(file_path) => {
+            println!("Starting simulator with input path: {}", file_path);
+            let mut sh = sim_handler_mutex_clone.lock().unwrap();
+            sh.load_file_path(file_path);
+            let robot_handlers = sh.reset();
+            egui_handler.reset_robot_handlers(robot_handlers);
+        }
+        None => {
+            println!("No file passed as argument. Continuing without loading file");
+        }
+    }
+
+    // Main simulation Loop
     loop {
         clear_background(WHITE);
 
