@@ -54,11 +54,15 @@ async fn main() {
     let file_path_arg = std::env::args().nth(1);
     match file_path_arg {
         Some(file_path) => {
-            println!("Starting simulator with input path: {}", file_path);
-            let mut sh = sim_handler_mutex_clone.lock().unwrap();
-            sh.load_file_path(file_path);
-            let robot_handlers = sh.reset();
-            egui_handler.reset_robot_handlers(robot_handlers);
+            if file_path == "" {
+                println!("Empty File path. Not opening");
+            } else {
+                println!("Starting simulator with input path: {}", file_path);
+                let mut sh = sim_handler_mutex_clone.lock().unwrap();
+                sh.load_file_path(file_path);
+                let robot_handlers = sh.reset();
+                egui_handler.reset_robot_handlers(robot_handlers);
+            }
         }
         None => {
             println!("No file passed as argument. Continuing without loading file");
@@ -224,6 +228,7 @@ async fn main() {
                 }
             }
         }
+        std::thread::sleep(Duration::from_secs_f32(DT));
 
         next_frame().await;
     }
