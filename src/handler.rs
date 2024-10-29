@@ -193,6 +193,9 @@ impl SimulationHandler {
         for obj in self.objects.iter() {
             collidables_vector.push(obj.get_collidable());
         }
+        for obj in self.robots.iter() {
+            collidables_vector.push(obj.get_collidable());
+        }
         return self.robots[robot.id].sense(&collidables_vector);
     }
 
@@ -376,10 +379,10 @@ impl SimulationHandler {
                     robot_collision = robot.collision_check_at(robot2, &next_pose);
                 }
             }
-            if !object_collision && !robot_collision {
-                collisions.push(false);
-            } else {
+            if object_collision || robot_collision {
                 collisions.push(true);
+            } else {
+                collisions.push(false);
             }
         }
 
