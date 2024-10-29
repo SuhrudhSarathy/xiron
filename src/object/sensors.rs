@@ -18,7 +18,7 @@ impl LiDAR {
         let mut rays = Vec::new();
         let angle_min = -PI;
         let angle_max = PI;
-        let num_readings: i32 = 180;
+        let num_readings: i32 = 360;
         let dtheta = (angle_max - angle_min) / num_readings as f32;
 
         for dt in 0..num_readings {
