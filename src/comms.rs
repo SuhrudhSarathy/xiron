@@ -1,7 +1,12 @@
-use std::{thread, time::Duration};
+use std::{
+    str::{self, FromStr},
+    thread,
+    time::Duration,
+};
 
+use macroquad::prelude::error;
 use serde::{Deserialize, Serialize};
-use zmq::{Context, Socket};
+use zmq::{Context, Message, Socket};
 
 use std::sync::mpsc::Sender;
 
@@ -62,31 +67,57 @@ pub struct Subscriber {
     _subscriber: Socket,
     spin_every: Duration,
     sender: Sender<String>,
+    topic_name: String,
 }
 
 impl Subscriber {
-    pub fn new(context: &Context, spin_every: Duration, sender: Sender<String>) -> Self {
+    pub fn new(
+        context: &Context,
+        topic_name: String,
+        spin_every: Duration,
+        sender: Sender<String>,
+    ) -> Self {
         let _subscriber = context.socket(zmq::SUB).unwrap();
         Self {
             _subscriber: _subscriber,
             spin_every: spin_every,
             sender: sender,
+            topic_name: topic_name,
         }
     }
 
-    pub fn bind(&self, topic_name: String, address: String) {
+    pub fn bind(&self, address: String) {
         self._subscriber.connect(&address).expect("Could not bind");
         let _out = self
             ._subscriber
-            .set_subscribe(topic_name.as_bytes())
+            .set_subscribe(self.topic_name.as_bytes())
             .unwrap();
     }
 
     pub fn recv(&self) -> Option<String> {
-        let _topic = self._subscriber.recv_bytes(0).unwrap();
-        let message = self._subscriber.recv_string(0).unwrap().unwrap();
+        let mut message1 = Message::new();
+        let _res = self
+            ._subscriber
+            .recv(&mut message1, 0)
+            .expect("Failed to get recv message");
 
-        return Some(message);
+        let mut message2 = Message::new();
+        let _res = self
+            ._subscriber
+            .recv(&mut message2, 0)
+            .expect("Failed to get recv message");
+
+        let _topic = message1.as_str().unwrap();
+        let message = message2.as_str();
+
+        match message {
+            Some(message) => {
+                return Some(String::from_str(message).unwrap());
+            }
+            None => {
+                return None;
+            }
+        }
     }
 
     pub fn spin(self) {
