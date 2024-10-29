@@ -18,15 +18,25 @@ async fn main() {
     scan_publisher.bind("tcp://127.0.0.1:5858".to_string());
 
     let (string_sender, string_reciever) = std::sync::mpsc::channel();
-    let vel_subscriber = Subscriber::new(&context, Duration::from_millis(100), string_sender);
+    let vel_subscriber = Subscriber::new(
+        &context,
+        "vel".to_string(),
+        Duration::from_millis(25),
+        string_sender,
+    );
 
-    vel_subscriber.bind("vel".to_string(), "tcp://127.0.0.1:5556".to_string());
+    vel_subscriber.bind("tcp://127.0.0.1:5556".to_string());
     vel_subscriber.spin();
 
     let (reset_sender, reset_reciever) = std::sync::mpsc::channel();
-    let reset_subscriber = Subscriber::new(&context, Duration::from_millis(100), reset_sender);
+    let reset_subscriber = Subscriber::new(
+        &context,
+        "reset".to_string(),
+        Duration::from_millis(25),
+        reset_sender,
+    );
 
-    reset_subscriber.bind("reset".to_string(), "tcp://127.0.0.1:5956".to_string());
+    reset_subscriber.bind("tcp://127.0.0.1:5956".to_string());
     reset_subscriber.spin();
 
     let (sender, reciever) = std::sync::mpsc::channel();
@@ -95,14 +105,19 @@ async fn main() {
             let output = string_reciever.try_recv();
             match output {
                 Ok(output) => {
-                    let twist_command_result: Result<Twist, Error>= serde_json::from_str(&output.to_string());
-                    match twist_command_result{
+                    let twist_command_result: Result<Twist, Error> =
+                        serde_json::from_str(&output.to_string());
+                    match twist_command_result {
                         Ok(twist_command) => {
-                            let robot_handler = egui_handler.get_robot_handler(&twist_command.robot_id);
+                            let robot_handler =
+                                egui_handler.get_robot_handler(&twist_command.robot_id);
                             match robot_handler {
                                 None => {}
                                 Some(handler) => {
-                                    sh.control(&handler, (twist_command.linear.0, twist_command.angular));
+                                    sh.control(
+                                        &handler,
+                                        (twist_command.linear.0, twist_command.angular),
+                                    );
                                 }
                             }
                         }
@@ -117,8 +132,7 @@ async fn main() {
 
         // Check for reset request
         let reset_output = reset_reciever.try_recv();
-        match reset_output
-        {
+        match reset_output {
             Ok(_output) => {
                 println!("Resetting Environment");
                 egui_handler.reset();
