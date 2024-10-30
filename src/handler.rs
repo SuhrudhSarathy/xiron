@@ -1,5 +1,3 @@
-use std::iter::zip;
-
 use crate::behaviour::traits::{Collidable, Drawable};
 use crate::object::robot::Robot;
 use crate::object::sensors::LiDARMsg;
@@ -9,6 +7,7 @@ use crate::parameter::*;
 use crate::parser::*;
 use crate::prelude::traits::{Genericbject, GuiObject};
 use crate::prelude::Footprint;
+use crate::utils::interpolate_pose;
 use macroquad::prelude::*;
 
 #[derive(Debug, Clone, Copy)]
@@ -351,47 +350,67 @@ impl SimulationHandler {
 
     // TODO: Check if this can be simplified
     pub fn step(&mut self) {
-        // For each robot, perform collision check and then step
         let mut next_poses: Vec<(f32, f32, f32)> = Vec::with_capacity(self.robots.len());
-        let mut collisions: Vec<bool> = Vec::with_capacity(self.robots.len());
 
         for robot in &mut self.robots {
             let next_pose = robot.next();
             next_poses.push(next_pose);
         }
+        let mut collisions: Vec<Option<f32>> = vec![None; self.robots.len()];
 
-        let iter = zip(&self.robots, &next_poses);
-        for (robot, next_pose) in iter.into_iter() {
-            let mut object_collision: bool = false;
+        // Check collisions with objects and other robots
+        for i in 0..self.robots.len() {
+            let robot = &self.robots[i];
+            let start_pose = robot.get_pose();
+            let end_pose = next_poses[i];
 
             // Object Collisions
-            for object in self.objects.iter() {
-                object_collision =
-                    robot.collision_check_at(&(*object.get_collidable()), &next_pose);
-                if object_collision {
-                    break;
+            for object in &self.objects {
+                if let Some(toi) = robot.collision_check_at_toi(
+                    &*object.get_collidable(),
+                    &start_pose,
+                    &end_pose,
+                    None,
+                    None,
+                ) {
+                    collisions[i] = Some(collisions[i].map_or(toi, |t| t.min(toi)));
                 }
             }
 
-            let mut robot_collision: bool = false;
-            for robot2 in self.robots.iter() {
-                if robot.id != robot2.id {
-                    robot_collision = robot.collision_check_at(robot2, &next_pose);
+            // Robot Collisions
+            for j in 0..self.robots.len() {
+                if i != j {
+                    let robot2 = &self.robots[j];
+                    let start_pose2 = robot2.get_pose();
+                    let end_pose2 = next_poses[j];
+                    if let Some(toi) = robot.collision_check_at_toi(
+                        robot2,
+                        &start_pose,
+                        &end_pose,
+                        Some(start_pose2),
+                        Some(end_pose2),
+                    ) {
+                        collisions[i] = Some(collisions[i].map_or(toi, |t| t.min(toi)));
+                        collisions[j] = Some(collisions[j].map_or(toi, |t| t.min(toi)));
+                    }
                 }
-            }
-            if object_collision || robot_collision {
-                collisions.push(true);
-            } else {
-                collisions.push(false);
             }
         }
 
+        // Update robot positions and handle inelastic collisions
         for i in 0..self.robots.len() {
             let robot = &mut self.robots[i];
-            let next_pose = next_poses[i];
-            let collision = collisions[i];
-            if !collision {
-                robot.step(&next_pose);
+            let start_pose = robot.get_pose();
+            let end_pose = next_poses[i];
+
+            if let Some(toi) = collisions[i] {
+                // Collision occurred, move robot to collision point and stop
+                let collision_pose = interpolate_pose(&start_pose, &end_pose, toi);
+                robot.step(&collision_pose);
+                robot.control((0.0, 0.0));
+            } else {
+                // No collision, move to next pose
+                robot.step(&end_pose);
             }
         }
     }
@@ -399,7 +418,7 @@ impl SimulationHandler {
     pub fn collision_status_at(&self, roboth: &RobotHandler, pose: &(f32, f32, f32)) -> bool {
         let robot = self.robots[roboth.id].clone();
         for object in self.objects.iter() {
-            let collision = robot.collision_check_at(&*object.get_collidable(), pose);
+            let collision = robot.collision_check_at(&*object.get_collidable(), pose, None);
             if collision {
                 return true;
             }

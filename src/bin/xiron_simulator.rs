@@ -2,22 +2,26 @@ use macroquad::prelude::*;
 use serde_json::Error;
 use std::sync::{Arc, Mutex};
 use std::time::Duration;
+use std::time::Instant;
 use xiron::comms::Twist;
 use xiron::prelude::*;
-
-use std::env::args;
 
 #[macroquad::main(xiron)]
 async fn main() {
     println!("Xiron Simulator!");
 
+    let pose_pub_addr = "ipc:///tmp/pose";
+    let scan_pub_addr = "ipc:///tmp/scan";
+    let vel_sub_addr = "ipc:///tmp/vel";
+    let reset_sub_addr = "ipc:///tmp/reset";
+
     let context = zmq::Context::new();
 
     let pose_publisher = Publisher::new(&context, "pose".to_string());
-    pose_publisher.bind("tcp://127.0.0.1:5555".to_string());
+    pose_publisher.bind(pose_pub_addr.to_string());
 
     let scan_publisher = Publisher::new(&context, "scan".to_string());
-    scan_publisher.bind("tcp://127.0.0.1:5858".to_string());
+    scan_publisher.bind(scan_pub_addr.to_string());
 
     let (string_sender, string_reciever) = std::sync::mpsc::channel();
     let vel_subscriber = Subscriber::new(
@@ -27,7 +31,7 @@ async fn main() {
         string_sender,
     );
 
-    vel_subscriber.bind("tcp://127.0.0.1:5556".to_string());
+    vel_subscriber.bind(vel_sub_addr.to_string());
     vel_subscriber.spin();
 
     let (reset_sender, reset_reciever) = std::sync::mpsc::channel();
@@ -38,7 +42,7 @@ async fn main() {
         reset_sender,
     );
 
-    reset_subscriber.bind("tcp://127.0.0.1:5956".to_string());
+    reset_subscriber.bind(reset_sub_addr.to_string());
     reset_subscriber.spin();
 
     let (sender, reciever) = std::sync::mpsc::channel();
@@ -68,6 +72,11 @@ async fn main() {
             println!("No file passed as argument. Continuing without loading file");
         }
     }
+
+    let mut rate = LoopRateHandler::new(1.0 / DT as f64);
+    rate.sleep();
+
+    let start = Instant::now();
 
     // Main simulation Loop
     loop {
@@ -132,6 +141,15 @@ async fn main() {
                         serde_json::from_str(&output.to_string());
                     match twist_command_result {
                         Ok(twist_command) => {
+                            if twist_command.robot_id == "robot2" {
+                                let dt = Instant::now() - start;
+                                println!(
+                                    "Time: {:?}: Got Message: {:?}",
+                                    dt.as_millis(),
+                                    twist_command
+                                );
+                            }
+
                             let robot_handler =
                                 egui_handler.get_robot_handler(&twist_command.robot_id);
                             match robot_handler {
@@ -228,8 +246,7 @@ async fn main() {
                 }
             }
         }
-        std::thread::sleep(Duration::from_secs_f32(DT));
-
         next_frame().await;
+        rate.sleep();
     }
 }

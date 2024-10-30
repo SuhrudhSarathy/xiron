@@ -49,6 +49,12 @@ impl Publisher {
 
     pub fn bind(&self, address: String) {
         self._publisher.bind(&address).expect("Could not bind");
+        self._publisher
+            .set_conflate(true)
+            .expect("Could not set conflate");
+        self._publisher
+            .set_immediate(true)
+            .expect("Could not set immediate");
     }
 
     pub fn send<T: Serialize>(&self, message: &T) {
@@ -88,6 +94,10 @@ impl Subscriber {
 
     pub fn bind(&self, address: String) {
         self._subscriber.connect(&address).expect("Could not bind");
+        self._subscriber.set_rcvhwm(10).expect("Could not set HWM");
+        self._subscriber
+            .set_rcvtimeo(1000)
+            .expect("Could not set rcvtimeout");
         let _out = self
             ._subscriber
             .set_subscribe(self.topic_name.as_bytes())
