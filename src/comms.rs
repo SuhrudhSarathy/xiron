@@ -3,8 +3,6 @@ use std::{
     thread,
     time::Duration,
 };
-
-use macroquad::prelude::error;
 use serde::{Deserialize, Serialize};
 use zmq::{Context, Message, Socket};
 
@@ -12,6 +10,7 @@ use std::sync::mpsc::Sender;
 
 #[derive(Debug, Deserialize, Default, Serialize)]
 pub struct Twist {
+    pub timestamp: f64,
     pub robot_id: String,
     pub linear: (f32, f32),
     pub angular: f32,
@@ -19,6 +18,7 @@ pub struct Twist {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Pose {
+    pub timestamp: f64,
     pub robot_id: String,
     pub position: (f32, f32),
     pub orientation: f32,
@@ -26,6 +26,7 @@ pub struct Pose {
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct LaserScan {
+    pub timestamp: f64,
     pub robot_id: String,
     pub angle_min: f32,
     pub angle_max: f32,
@@ -49,20 +50,14 @@ impl Publisher {
 
     pub fn bind(&self, address: String) {
         self._publisher.bind(&address).expect("Could not bind");
-        self._publisher
-            .set_conflate(true)
-            .expect("Could not set conflate");
-        self._publisher
-            .set_immediate(true)
-            .expect("Could not set immediate");
     }
 
     pub fn send<T: Serialize>(&self, message: &T) {
         let message_as_string = serde_json::to_string(&message).expect("Could not convert");
 
-        self._publisher
-            .send(&format!("{}", self.topic_name), zmq::SNDMORE)
-            .unwrap();
+        // self._publisher
+        //     .send(&format!("{}", self.topic_name), zmq::SNDMORE)
+        //     .unwrap();
         self._publisher
             .send(&message_as_string.to_owned(), 0)
             .unwrap();
@@ -94,10 +89,6 @@ impl Subscriber {
 
     pub fn bind(&self, address: String) {
         self._subscriber.connect(&address).expect("Could not bind");
-        self._subscriber.set_rcvhwm(10).expect("Could not set HWM");
-        self._subscriber
-            .set_rcvtimeo(1000)
-            .expect("Could not set rcvtimeout");
         let _out = self
             ._subscriber
             .set_subscribe(self.topic_name.as_bytes())
@@ -105,19 +96,21 @@ impl Subscriber {
     }
 
     pub fn recv(&self) -> Option<String> {
-        let mut message1 = Message::new();
-        let _res = self
-            ._subscriber
-            .recv(&mut message1, 0)
-            .expect("Failed to get recv message");
+        // let mut message1 = Message::new();
+        // let _res = self
+        //     ._subscriber
+        //     .recv(&mut message1, 0)
+        //     .expect("Failed to get recv message");
 
-        let mut message2 = Message::new();
-        let _res = self
-            ._subscriber
-            .recv(&mut message2, 0)
-            .expect("Failed to get recv message");
+        // let mut message2 = Message::new();
+        // let _res = self
+        //     ._subscriber
+        //     .recv(&mut message2, 0)
+        //     .expect("Failed to get recv message");
 
-        let _topic = message1.as_str().unwrap();
+        let message2 = self._subscriber.recv_msg(0).expect("Failed to recv message");
+
+        // let _topic = message1.as_str().unwrap();
         let message = message2.as_str();
 
         match message {

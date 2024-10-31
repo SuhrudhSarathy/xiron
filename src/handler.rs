@@ -509,7 +509,7 @@ impl SimulationHandler {
             one_meterx_in_pixel_frame.0,
             one_meterx_in_pixel_frame.1,
             2.0,
-            GREEN,
+            RED,
         );
 
         draw_line(
@@ -518,7 +518,7 @@ impl SimulationHandler {
             one_metery_in_pixel_frame.0,
             one_metery_in_pixel_frame.1,
             2.0,
-            RED,
+            GREEN,
         );
     }
     pub fn draw(&self) {

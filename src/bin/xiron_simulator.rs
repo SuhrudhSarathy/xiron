@@ -1,10 +1,11 @@
 use macroquad::prelude::*;
 use serde_json::Error;
+use core::time;
 use std::sync::{Arc, Mutex};
-use std::time::Duration;
-use std::time::Instant;
 use xiron::comms::Twist;
 use xiron::prelude::*;
+
+use std::time::{Instant, Duration, SystemTime, UNIX_EPOCH};
 
 #[macroquad::main(xiron)]
 async fn main() {
@@ -75,9 +76,6 @@ async fn main() {
 
     let mut rate = LoopRateHandler::new(1.0 / DT as f64);
     rate.sleep();
-
-    let start = Instant::now();
-
     // Main simulation Loop
     loop {
         clear_background(WHITE);
@@ -141,15 +139,6 @@ async fn main() {
                         serde_json::from_str(&output.to_string());
                     match twist_command_result {
                         Ok(twist_command) => {
-                            if twist_command.robot_id == "robot2" {
-                                let dt = Instant::now() - start;
-                                println!(
-                                    "Time: {:?}: Got Message: {:?}",
-                                    dt.as_millis(),
-                                    twist_command
-                                );
-                            }
-
                             let robot_handler =
                                 egui_handler.get_robot_handler(&twist_command.robot_id);
                             match robot_handler {
@@ -192,6 +181,7 @@ async fn main() {
                         Some(robot) => {
                             let pose = sh.get_pose(&robot);
                             let pose_msg = Pose {
+                                timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs_f64(),
                                 robot_id: robot_name.clone(),
                                 position: (pose.0, pose.1),
                                 orientation: pose.2,
@@ -200,6 +190,7 @@ async fn main() {
 
                             let scan = sh.sense(&robot);
                             let scan_msg = LaserScan {
+                                timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs_f64(),
                                 robot_id: robot_name.clone(),
                                 angle_min: scan.angle_min,
                                 angle_max: scan.angle_max,
@@ -224,6 +215,7 @@ async fn main() {
                             Some(robot) => {
                                 let pose = sh.get_pose(&robot);
                                 let pose_msg = Pose {
+                                    timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs_f64(),
                                     robot_id: robot_name.clone(),
                                     position: (pose.0, pose.1),
                                     orientation: pose.2,
@@ -232,6 +224,7 @@ async fn main() {
 
                                 let scan = sh.sense(&robot);
                                 let scan_msg = LaserScan {
+                                    timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs_f64(),
                                     robot_id: robot_name.clone(),
                                     angle_min: scan.angle_min,
                                     angle_max: scan.angle_max,

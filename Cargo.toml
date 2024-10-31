@@ -16,6 +16,8 @@ egui-macroquad = "0.15.0"
 rfd = "0.11.4"
 futures = "0.3.28"
 rand = "0.8.5"
+tungstenite = "0.24.0"
+url = "2.5.2"
 
 [[bin]]
 name = "xiron_simulator"
