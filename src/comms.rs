@@ -1,9 +1,9 @@
+use serde::{Deserialize, Serialize};
 use std::{
     str::{self, FromStr},
     thread,
     time::Duration,
 };
-use serde::{Deserialize, Serialize};
 use zmq::{Context, Message, Socket};
 
 use std::sync::mpsc::Sender;
@@ -108,7 +108,10 @@ impl Subscriber {
         //     .recv(&mut message2, 0)
         //     .expect("Failed to get recv message");
 
-        let message2 = self._subscriber.recv_msg(0).expect("Failed to recv message");
+        let message2 = self
+            ._subscriber
+            .recv_msg(0)
+            .expect("Failed to recv message");
 
         // let _topic = message1.as_str().unwrap();
         let message = message2.as_str();

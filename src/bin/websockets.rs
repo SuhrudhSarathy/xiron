@@ -1,9 +1,5 @@
 use macroquad::prelude::*;
-use std::net::TcpListener;
-use std::sync::mpsc::{channel, Receiver, Sender};
-use std::thread;
-use tungstenite::accept_hdr;
-use tungstenite::handshake::server::{Request, Response};
+use xiron::ws_comms::{WebsocketPublisher, WebsocketSubscriber};
 
 fn window_conf() -> Conf {
     Conf {
@@ -14,34 +10,11 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let (tx, rx): (Sender<String>, Receiver<String>) = channel();
+    let string_sub = WebsocketSubscriber::new("localhost:8765".to_string());
+    let rx = string_sub.start();
 
-    // Spawn WebSocket server in a separate thread
-    thread::spawn(move || {
-        let server = TcpListener::bind("127.0.0.1:3012").unwrap();
-        println!("WebSocket server listening on ws://127.0.0.1:3012");
-
-        for stream in server.incoming() {
-            let tx_clone = tx.clone();
-            thread::spawn(move || {
-                let callback = |req: &Request, response: Response| {
-                    println!("New WebSocket connection: {}", req.uri().path());
-                    Ok(response)
-                };
-
-                let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
-
-                loop {
-                    let msg = websocket.read().unwrap();
-                    if msg.is_text() {
-                        if let Ok(text) = msg.into_text() {
-                            tx_clone.send(text).unwrap();
-                        }
-                    }
-                }
-            });
-        }
-    });
+    let status_pub = WebsocketPublisher::new("localhost:8766".to_string());
+    let tx = status_pub.start();
 
     let mut messages = Vec::new();
 
@@ -52,6 +25,8 @@ async fn main() {
         while let Ok(msg) = rx.try_recv() {
             messages.push(msg);
         }
+
+        tx.send("hello world 2".to_string()).unwrap();
 
         // Display received messages
         for (i, msg) in messages.iter().enumerate() {
