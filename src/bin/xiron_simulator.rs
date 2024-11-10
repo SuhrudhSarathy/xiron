@@ -1,58 +1,31 @@
 use macroquad::prelude::*;
-use serde_json::Error;
-use core::time;
+use serde_json::{json, Error, Value};
 use std::sync::{Arc, Mutex};
 use xiron::comms::Twist;
 use xiron::prelude::*;
 
-use std::time::{Instant, Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 #[macroquad::main(xiron)]
 async fn main() {
     println!("Xiron Simulator!");
 
-    let pose_pub_addr = "ipc:///tmp/pose";
-    let scan_pub_addr = "ipc:///tmp/scan";
-    let vel_sub_addr = "ipc:///tmp/vel";
-    let reset_sub_addr = "ipc:///tmp/reset";
+    let ws_subscriber_addr = "localhost:9000";
+    let ws_publisher_addr = "localhost:9001";
 
-    let context = zmq::Context::new();
+    let ws_subcriber = WebsocketSubscriber::new(ws_subscriber_addr.to_string());
+    let ws_publisher = WebsocketPublisher::new(ws_publisher_addr.to_string());
 
-    let pose_publisher = Publisher::new(&context, "pose".to_string());
-    pose_publisher.bind(pose_pub_addr.to_string());
+    let pub_tx = ws_publisher.start();
+    let sub_rx = ws_subcriber.start();
 
-    let scan_publisher = Publisher::new(&context, "scan".to_string());
-    scan_publisher.bind(scan_pub_addr.to_string());
-
-    let (string_sender, string_reciever) = std::sync::mpsc::channel();
-    let vel_subscriber = Subscriber::new(
-        &context,
-        "vel".to_string(),
-        Duration::from_millis(25),
-        string_sender,
-    );
-
-    vel_subscriber.bind(vel_sub_addr.to_string());
-    vel_subscriber.spin();
-
-    let (reset_sender, reset_reciever) = std::sync::mpsc::channel();
-    let reset_subscriber = Subscriber::new(
-        &context,
-        "reset".to_string(),
-        Duration::from_millis(25),
-        reset_sender,
-    );
-
-    reset_subscriber.bind(reset_sub_addr.to_string());
-    reset_subscriber.spin();
-
-    let (sender, reciever) = std::sync::mpsc::channel();
+    let (open_sender, open_reciever) = std::sync::mpsc::channel();
     let (save_sender, save_reciever) = std::sync::mpsc::channel();
 
     let sim_handler = SimulationHandler::new();
     let sim_handler_mutex = Arc::new(Mutex::new(sim_handler));
     let sim_handler_mutex_clone = Arc::clone(&sim_handler_mutex);
-    let mut egui_handler = EguiInterface::new(sender, save_sender, sim_handler_mutex);
+    let mut egui_handler = EguiInterface::new(open_sender, save_sender, sim_handler_mutex);
     let mut last_sent_time: Option<f64> = None;
 
     // Parse the CLI args for file path
@@ -80,7 +53,7 @@ async fn main() {
     loop {
         clear_background(WHITE);
 
-        match reciever.try_recv() {
+        match open_reciever.try_recv() {
             Ok(message) => {
                 println!("Got Open message here: {}", message);
                 let mut sh = sim_handler_mutex_clone.lock().unwrap();
@@ -130,115 +103,121 @@ async fn main() {
         egui_macroquad::draw();
 
         // Check if there were any velocity messages to process.
-        {
-            let mut sh = sim_handler_mutex_clone.lock().unwrap();
-            let output = string_reciever.try_recv();
-            match output {
-                Ok(output) => {
-                    let twist_command_result: Result<Twist, Error> =
-                        serde_json::from_str(&output.to_string());
-                    match twist_command_result {
-                        Ok(twist_command) => {
-                            let robot_handler =
-                                egui_handler.get_robot_handler(&twist_command.robot_id);
-                            match robot_handler {
-                                None => {}
-                                Some(handler) => {
-                                    sh.control(
-                                        &handler,
-                                        (twist_command.linear.0, twist_command.angular),
-                                    );
+        let recieved_msg = sub_rx.try_recv();
+        match recieved_msg {
+            Ok(msg) => {
+                let jsonified_msg: Result<Value, Error> = serde_json::from_str(&msg);
+                match jsonified_msg {
+                    Ok(jsonified_msg) => {
+                        if jsonified_msg["type"] == "vel" {
+                            let twist_command_result: Result<Twist, Error> =
+                                serde_json::from_value(jsonified_msg["message"].clone());
+                            match twist_command_result {
+                                Ok(twist_command) => {
+                                    let robot_handler =
+                                        egui_handler.get_robot_handler(&twist_command.robot_id);
+                                    match robot_handler {
+                                        None => {}
+                                        Some(handler) => {
+                                            let mut sh = sim_handler_mutex_clone.lock().unwrap();
+                                            sh.control(
+                                                &handler,
+                                                (twist_command.linear.0, twist_command.angular),
+                                            );
+                                        }
+                                    }
+                                }
+                                Err(err) => {
+                                    println!("Got Error in parsing velocities: {err}");
                                 }
                             }
-                        }
-                        Err(err) => {
-                            println!("Got Error in parsing velocities: {err}");
+                        } else if jsonified_msg["type"] == "reset" {
+                            egui_handler.reset();
                         }
                     }
+                    Err(err) => {
+                        error!("Error in decoding json message: {}", err)
+                    }
                 }
-                Err(_error) => {}
-            }
-        }
-
-        // Check for reset request
-        let reset_output = reset_reciever.try_recv();
-        match reset_output {
-            Ok(_output) => {
-                println!("Resetting Environment");
-                egui_handler.reset();
             }
             Err(_error) => {}
         }
 
         let time_now = get_time();
+        let mut send_message: bool = false;
         match last_sent_time {
             None => {
-                last_sent_time = Some(get_time());
-                let sh = sim_handler_mutex_clone.lock().unwrap();
-                for robot_name in egui_handler.robot_name_map.keys() {
-                    let handler = egui_handler.get_robot_handler(robot_name);
-                    match handler {
-                        Some(robot) => {
-                            let pose = sh.get_pose(&robot);
-                            let pose_msg = Pose {
-                                timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs_f64(),
-                                robot_id: robot_name.clone(),
-                                position: (pose.0, pose.1),
-                                orientation: pose.2,
-                            };
-                            pose_publisher.send(&pose_msg);
-
-                            let scan = sh.sense(&robot);
-                            let scan_msg = LaserScan {
-                                timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs_f64(),
-                                robot_id: robot_name.clone(),
-                                angle_min: scan.angle_min,
-                                angle_max: scan.angle_max,
-                                num_readings: scan.num_readings,
-                                values: scan.values,
-                            };
-                            scan_publisher.send(&scan_msg);
-                        }
-                        None => {}
-                    }
-                }
+                send_message = true;
             }
 
             // Publish the Scan data and Pose data for each robot present.
             Some(t_last) => {
                 if (time_now - t_last) > (1.0 / DATA_SEND_FREQ) {
-                    last_sent_time = Some(get_time());
-                    let sh = sim_handler_mutex_clone.lock().unwrap();
-                    for robot_name in egui_handler.robot_name_map.keys() {
-                        let handler = egui_handler.get_robot_handler(robot_name);
-                        match handler {
-                            Some(robot) => {
-                                let pose = sh.get_pose(&robot);
-                                let pose_msg = Pose {
-                                    timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs_f64(),
-                                    robot_id: robot_name.clone(),
-                                    position: (pose.0, pose.1),
-                                    orientation: pose.2,
-                                };
-                                pose_publisher.send(&pose_msg);
-
-                                let scan = sh.sense(&robot);
-                                let scan_msg = LaserScan {
-                                    timestamp: SystemTime::now().duration_since(UNIX_EPOCH).unwrap().as_secs_f64(),
-                                    robot_id: robot_name.clone(),
-                                    angle_min: scan.angle_min,
-                                    angle_max: scan.angle_max,
-                                    num_readings: scan.num_readings,
-                                    values: scan.values,
-                                };
-                                scan_publisher.send(&scan_msg);
-                            }
-                            None => {}
-                        }
-                    }
+                    send_message = true;
                 }
             }
         }
+
+        if send_message {
+            last_sent_time = Some(get_time());
+            let sh = sim_handler_mutex_clone.lock().unwrap();
+            for robot_name in egui_handler.robot_name_map.keys() {
+                let handler = egui_handler.get_robot_handler(robot_name);
+                match handler {
+                    Some(robot) => {
+                        let pose = sh.get_pose(&robot);
+                        let pose_msg = Pose {
+                            timestamp: SystemTime::now()
+                                .duration_since(UNIX_EPOCH)
+                                .unwrap()
+                                .as_secs_f64(),
+                            robot_id: robot_name.clone(),
+                            position: (pose.0, pose.1),
+                            orientation: pose.2,
+                        };
+                        let pose_msg_string = json!({
+                            "type": "pose",
+                            "message": pose_msg
+                        })
+                        .to_string();
+
+                        match pub_tx.send(pose_msg_string) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                println!("Got error when sending pose via channel {}", e);
+                            }
+                        }
+
+                        let scan = sh.sense(&robot);
+                        let scan_msg = LaserScan {
+                            timestamp: SystemTime::now()
+                                .duration_since(UNIX_EPOCH)
+                                .unwrap()
+                                .as_secs_f64(),
+                            robot_id: robot_name.clone(),
+                            angle_min: scan.angle_min,
+                            angle_max: scan.angle_max,
+                            num_readings: scan.num_readings,
+                            values: scan.values,
+                        };
+                        let scan_msg_string = json!({
+                            "type": "scan",
+                            "message": scan_msg
+                        })
+                        .to_string();
+
+                        match pub_tx.send(scan_msg_string) {
+                            Ok(_) => {}
+                            Err(e) => {
+                                println!("Got error when sending scan via channel {}", e);
+                            }
+                        }
+                    }
+                    None => {}
+                }
+            }
+        }
+
         next_frame().await;
         rate.sleep();
     }

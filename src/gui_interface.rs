@@ -219,16 +219,16 @@ impl EguiInterface {
         self.object_select_mode = ObjectSelectMode::None;
         self.robot_handlers.clear();
         self.robot_name_map.clear();
-    
+
         let mut sh = self.sim_handler.lock().unwrap();
         let robot_handlers = sh.reset();
-    
+
         // Drop sh to make take ownership of self
         drop(sh);
-    
+
         self.reset_robot_handlers(robot_handlers);
     }
-    
+
     /// Draws buttons for adding Robot, Static Object and Wall to the screen.
     /// Also draws the buttons for Modifying Rotation, Bounds and Position.
     fn draw_adding_and_modifying_objects_bar(&mut self, ui: &mut egui::Ui) {

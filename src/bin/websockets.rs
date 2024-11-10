@@ -1,5 +1,5 @@
 use macroquad::prelude::*;
-use xiron::ws_comms::{WebsocketPublisher, WebsocketSubscriber};
+use xiron::comms::{WebsocketPublisher, WebsocketSubscriber};
 
 fn window_conf() -> Conf {
     Conf {
@@ -10,10 +10,10 @@ fn window_conf() -> Conf {
 
 #[macroquad::main(window_conf)]
 async fn main() {
-    let string_sub = WebsocketSubscriber::new("localhost:8765".to_string());
+    let string_sub = WebsocketSubscriber::new("localhost:9000".to_string());
     let rx = string_sub.start();
 
-    let status_pub = WebsocketPublisher::new("localhost:8766".to_string());
+    let status_pub = WebsocketPublisher::new("localhost:9001".to_string());
     let tx = status_pub.start();
 
     let mut messages = Vec::new();

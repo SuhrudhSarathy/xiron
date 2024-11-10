@@ -1,12 +1,11 @@
-use serde::{Deserialize, Serialize};
-use std::{
-    str::{self, FromStr},
-    thread,
-    time::Duration,
-};
-use zmq::{Context, Message, Socket};
+use crossbeam::channel::{unbounded, Receiver, Sender};
+use futures::stream;
+use std::net::TcpListener;
+use std::thread;
 
-use std::sync::mpsc::Sender;
+use serde::{Deserialize, Serialize};
+use tungstenite::accept_hdr;
+use tungstenite::handshake::server::{Request, Response};
 
 #[derive(Debug, Deserialize, Default, Serialize)]
 pub struct Twist {
@@ -34,108 +33,113 @@ pub struct LaserScan {
     pub values: Vec<f32>,
 }
 
-pub struct Publisher {
-    _publisher: Socket,
-    topic_name: String,
+pub struct WebsocketPublisher {
+    url: String,
 }
 
-impl Publisher {
-    pub fn new(context: &Context, topic_name: String) -> Self {
-        let _publisher = context.socket(zmq::PUB).unwrap();
-        Publisher {
-            _publisher: _publisher,
-            topic_name: topic_name,
-        }
+impl WebsocketPublisher {
+    pub fn new(url: String) -> WebsocketPublisher {
+        WebsocketPublisher { url }
     }
 
-    pub fn bind(&self, address: String) {
-        self._publisher.bind(&address).expect("Could not bind");
-    }
+    pub fn start(&self) -> Sender<String> {
+        let url = self.url.clone();
+        let (tx, rx): (Sender<String>, Receiver<String>) = unbounded();
 
-    pub fn send<T: Serialize>(&self, message: &T) {
-        let message_as_string = serde_json::to_string(&message).expect("Could not convert");
+        thread::spawn(move || {
+            let server = TcpListener::bind(&url).unwrap();
+            println!("WebSocket Publisher on {} initialized", url);
 
-        // self._publisher
-        //     .send(&format!("{}", self.topic_name), zmq::SNDMORE)
-        //     .unwrap();
-        self._publisher
-            .send(&message_as_string.to_owned(), 0)
-            .unwrap();
-    }
-}
+            for stream in server.incoming() {
+                let rx_cloned = rx.clone();
+                thread::spawn(move || {
+                    let callback = |req: &Request, response: Response| {
+                        println!("New connection: {}", req.uri().path());
+                        Ok(response)
+                    };
 
-pub struct Subscriber {
-    _subscriber: Socket,
-    spin_every: Duration,
-    sender: Sender<String>,
-    topic_name: String,
-}
+                    println!("New connection established");
+                    let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
 
-impl Subscriber {
-    pub fn new(
-        context: &Context,
-        topic_name: String,
-        spin_every: Duration,
-        sender: Sender<String>,
-    ) -> Self {
-        let _subscriber = context.socket(zmq::SUB).unwrap();
-        Self {
-            _subscriber: _subscriber,
-            spin_every: spin_every,
-            sender: sender,
-            topic_name: topic_name,
-        }
-    }
-
-    pub fn bind(&self, address: String) {
-        self._subscriber.connect(&address).expect("Could not bind");
-        let _out = self
-            ._subscriber
-            .set_subscribe(self.topic_name.as_bytes())
-            .unwrap();
-    }
-
-    pub fn recv(&self) -> Option<String> {
-        // let mut message1 = Message::new();
-        // let _res = self
-        //     ._subscriber
-        //     .recv(&mut message1, 0)
-        //     .expect("Failed to get recv message");
-
-        // let mut message2 = Message::new();
-        // let _res = self
-        //     ._subscriber
-        //     .recv(&mut message2, 0)
-        //     .expect("Failed to get recv message");
-
-        let message2 = self
-            ._subscriber
-            .recv_msg(0)
-            .expect("Failed to recv message");
-
-        // let _topic = message1.as_str().unwrap();
-        let message = message2.as_str();
-
-        match message {
-            Some(message) => {
-                return Some(String::from_str(message).unwrap());
+                    loop {
+                        match rx_cloned.recv() {
+                            Ok(message) => {
+                                if let Err(e) = websocket.send(tungstenite::Message::Text(message))
+                                {
+                                    println!("Error sending over WebSocket: {}", e);
+                                    break;
+                                }
+                            }
+                            Err(e) => {
+                                println!("Error receiving from channel: {}", e);
+                                break;
+                            }
+                        }
+                    }
+                });
             }
-            None => {
-                return None;
-            }
-        }
-    }
-
-    pub fn spin(self) {
-        thread::spawn(move || loop {
-            let out = self.recv();
-
-            match out {
-                Some(data) => self.sender.send(data).unwrap(),
-                None => {}
-            }
-
-            thread::sleep(self.spin_every);
         });
+
+        return tx;
+    }
+}
+
+pub struct WebsocketSubscriber {
+    url: String,
+}
+
+impl WebsocketSubscriber {
+    pub fn new(url: String) -> WebsocketSubscriber {
+        WebsocketSubscriber { url }
+    }
+
+    pub fn start(self) -> Receiver<String> {
+        let url = self.url.clone();
+        let (tx, rx): (Sender<String>, Receiver<String>) = unbounded();
+
+        let tx_clone = tx.clone();
+
+        thread::spawn(move || {
+            let server = TcpListener::bind(&url).unwrap();
+            println!("WebSocket Subscriber on {} initialized", url);
+
+            for stream in server.incoming() {
+                let tx_cloned = tx_clone.clone();
+
+                thread::spawn(move || {
+                    let callback = |req: &Request, response: Response| {
+                        println!("New connection: {}", req.uri().path());
+                        Ok(response)
+                    };
+
+                    println!("New connection established");
+                    let mut websocket = accept_hdr(stream.unwrap(), callback).unwrap();
+
+                    loop {
+                        let ret = websocket.read();
+                        match ret {
+                            Ok(ret_msg) => {
+                                if let Ok(message) = ret_msg.into_text() {
+                                    let _ret = tx_cloned.send(message);
+                                    match _ret {
+                                        Ok(_) => {}
+                                        Err(e) => {
+                                            println!("Got Send Error: {}. Breaking comms", e);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                println!("Error when recieving message: {}", e);
+                                break;
+                            }
+                        }
+                    }
+                });
+            }
+        });
+
+        return rx;
     }
 }
