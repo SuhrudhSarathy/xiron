@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use xiron::comms::Twist;
 use xiron::prelude::*;
 
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[macroquad::main(xiron)]
 async fn main() {
