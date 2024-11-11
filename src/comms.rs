@@ -39,7 +39,8 @@ impl WebsocketPublisher {
                     loop {
                         match rx_cloned.recv() {
                             Ok(message) => {
-                                if let Err(e) = websocket.send(tungstenite::Message::Binary(message))
+                                if let Err(e) =
+                                    websocket.send(tungstenite::Message::Binary(message))
                                 {
                                     println!("Error sending over WebSocket: {}", e);
                                     break;

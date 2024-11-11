@@ -122,10 +122,7 @@ async fn main() {
                                         Some(handler) => {
                                             let mut sh = sim_handler_mutex_clone.lock().unwrap();
                                             let twist = twist_command.linear.unwrap();
-                                            sh.control(
-                                                &handler,
-                                                (twist.x, twist_command.angular),
-                                            );
+                                            sh.control(&handler, (twist.x, twist_command.angular));
                                         }
                                     }
                                 }
@@ -133,7 +130,6 @@ async fn main() {
                                     println!("Got Error in parsing velocities: {err}");
                                 }
                             }
-                            
                         } else if msg.type_url == "reset" {
                             egui_handler.reset();
                         }
@@ -175,14 +171,16 @@ async fn main() {
                                 .unwrap()
                                 .as_secs_f64(),
                             robot_id: robot_name.clone(),
-                            position: Some(PositionMsg{x: pose.0, y: pose.1}),
+                            position: Some(PositionMsg {
+                                x: pose.0,
+                                y: pose.1,
+                            }),
                             orientation: pose.2,
                         };
 
-                        let packed_msg = Any{
+                        let packed_msg = Any {
                             type_url: "pose".to_string(),
                             value: pose_msg.encode_to_vec(),
-
                         };
                         match pub_tx.send(packed_msg.encode_to_vec()) {
                             Ok(_) => {}
@@ -202,7 +200,10 @@ async fn main() {
                             num_readings: scan.num_readings,
                             values: scan.values,
                         };
-                        let packed_msg = Any { type_url: "scan".to_string(), value: scan_msg.encode_to_vec() };
+                        let packed_msg = Any {
+                            type_url: "scan".to_string(),
+                            value: scan_msg.encode_to_vec(),
+                        };
                         match pub_tx.send(packed_msg.encode_to_vec()) {
                             Ok(_) => {}
                             Err(e) => {
