@@ -1,0 +1,10 @@
+syntax = "proto3";
+
+message LaserScanMsg {
+  double timestamp = 1;
+  string robot_id = 2;
+  float angle_min = 3;
+  float angle_max = 4;
+  int32 num_readings = 5;
+  repeated float values = 6;
+}

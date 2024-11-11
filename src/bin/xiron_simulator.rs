@@ -1,7 +1,9 @@
 use macroquad::prelude::*;
-use serde_json::{json, Error, Value};
+use pose_msg::PositionMsg;
+use prost::Message;
+use prost_types::Any;
 use std::sync::{Arc, Mutex};
-use xiron::comms::Twist;
+
 use xiron::prelude::*;
 
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -106,12 +108,11 @@ async fn main() {
         let recieved_msg = sub_rx.try_recv();
         match recieved_msg {
             Ok(msg) => {
-                let jsonified_msg: Result<Value, Error> = serde_json::from_str(&msg);
-                match jsonified_msg {
-                    Ok(jsonified_msg) => {
-                        if jsonified_msg["type"] == "vel" {
-                            let twist_command_result: Result<Twist, Error> =
-                                serde_json::from_value(jsonified_msg["message"].clone());
+                let protobuf_message = Any::decode(msg.as_slice());
+                match protobuf_message {
+                    Ok(msg) => {
+                        if msg.type_url == "vel" {
+                            let twist_command_result = TwistMsg::decode(msg.value.as_slice());
                             match twist_command_result {
                                 Ok(twist_command) => {
                                     let robot_handler =
@@ -120,9 +121,10 @@ async fn main() {
                                         None => {}
                                         Some(handler) => {
                                             let mut sh = sim_handler_mutex_clone.lock().unwrap();
+                                            let twist = twist_command.linear.unwrap();
                                             sh.control(
                                                 &handler,
-                                                (twist_command.linear.0, twist_command.angular),
+                                                (twist.x, twist_command.angular),
                                             );
                                         }
                                     }
@@ -131,7 +133,8 @@ async fn main() {
                                     println!("Got Error in parsing velocities: {err}");
                                 }
                             }
-                        } else if jsonified_msg["type"] == "reset" {
+                            
+                        } else if msg.type_url == "reset" {
                             egui_handler.reset();
                         }
                     }
@@ -166,30 +169,29 @@ async fn main() {
                 match handler {
                     Some(robot) => {
                         let pose = sh.get_pose(&robot);
-                        let pose_msg = Pose {
+                        let pose_msg = PoseMsg {
                             timestamp: SystemTime::now()
                                 .duration_since(UNIX_EPOCH)
                                 .unwrap()
                                 .as_secs_f64(),
                             robot_id: robot_name.clone(),
-                            position: (pose.0, pose.1),
+                            position: Some(PositionMsg{x: pose.0, y: pose.1}),
                             orientation: pose.2,
                         };
-                        let pose_msg_string = json!({
-                            "type": "pose",
-                            "message": pose_msg
-                        })
-                        .to_string();
 
-                        match pub_tx.send(pose_msg_string) {
+                        let packed_msg = Any{
+                            type_url: "pose".to_string(),
+                            value: pose_msg.encode_to_vec(),
+
+                        };
+                        match pub_tx.send(packed_msg.encode_to_vec()) {
                             Ok(_) => {}
                             Err(e) => {
                                 println!("Got error when sending pose via channel {}", e);
                             }
                         }
-
                         let scan = sh.sense(&robot);
-                        let scan_msg = LaserScan {
+                        let scan_msg = LaserScanMsg {
                             timestamp: SystemTime::now()
                                 .duration_since(UNIX_EPOCH)
                                 .unwrap()
@@ -200,13 +202,8 @@ async fn main() {
                             num_readings: scan.num_readings,
                             values: scan.values,
                         };
-                        let scan_msg_string = json!({
-                            "type": "scan",
-                            "message": scan_msg
-                        })
-                        .to_string();
-
-                        match pub_tx.send(scan_msg_string) {
+                        let packed_msg = Any { type_url: "scan".to_string(), value: scan_msg.encode_to_vec() };
+                        match pub_tx.send(packed_msg.encode_to_vec()) {
                             Ok(_) => {}
                             Err(e) => {
                                 println!("Got error when sending scan via channel {}", e);

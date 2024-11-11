@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+message TwistMsg {
+  double timestamp = 1;
+  string robot_id = 2;
+  LinearMsg linear = 3;
+  float angular = 4;
+
+  message LinearMsg {
+    float x = 1;
+    float y = 2;
+  }
+}

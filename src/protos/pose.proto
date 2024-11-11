@@ -1,0 +1,13 @@
+syntax = "proto3";
+
+message PoseMsg {
+  double timestamp = 1;
+  string robot_id = 2;
+  PositionMsg position = 3;
+  float orientation = 4;
+
+  message PositionMsg {
+    float x = 1;
+    float y = 2;
+  }
+}
