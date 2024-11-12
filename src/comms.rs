@@ -95,14 +95,13 @@ impl WebsocketSubscriber {
                         let ret = websocket.read();
                         match ret {
                             Ok(ret_msg) => {
-                                if let message = ret_msg.into_data() {
-                                    let _ret = tx_cloned.send(message);
-                                    match _ret {
-                                        Ok(_) => {}
-                                        Err(e) => {
-                                            println!("Got Send Error: {}. Breaking comms", e);
-                                            break;
-                                        }
+                                let message = ret_msg.into_data();
+                                let _ret = tx_cloned.send(message);
+                                match _ret {
+                                    Ok(_) => {}
+                                    Err(e) => {
+                                        println!("Got Send Error: {}. Breaking comms", e);
+                                        break;
                                     }
                                 }
                             }
