@@ -147,7 +147,7 @@ pub trait Collidable {
                 self.get_pose().2,
             ),
             ray,
-            100.0,
+            10.0,
             true,
         );
         match ray_result {
