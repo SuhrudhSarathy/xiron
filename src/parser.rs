@@ -1,5 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json;
 use serde_yaml;
 
 use crate::prelude::DriveType;
@@ -71,14 +70,4 @@ pub fn get_config_from_file(path: String) -> Option<Config> {
             return None;
         }
     }
-}
-
-pub fn get_config_to_string(config: Config) -> String {
-    let value = serde_json::to_string(&config).expect("Couldn't convert the config to String");
-    return value.to_string();
-}
-
-pub fn get_config_from_string(string: String) -> Config {
-    let config: Config = serde_json::from_str(&string).expect("Couldn't convert the config");
-    return config;
 }

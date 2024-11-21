@@ -1,6 +1,6 @@
 [package]
 name = "xiron"
-version = "0.3.0"
+version = "0.4.0"
 edition = "2021"
 license = "MIT"
 description = "A lightweight 2D robot simulator written in Rust."
@@ -10,7 +10,6 @@ parry2d = "0.12.0"
 macroquad = "0.3.25"
 serde = { version = "1.0", features = ["derive"] }
 serde_yaml = "0.9"
-serde_json = "1.0.94"
 egui-macroquad = "0.15.0"
 rfd = "0.11.4"
 futures = "0.3.28"
