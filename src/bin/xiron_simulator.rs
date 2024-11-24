@@ -51,8 +51,73 @@ async fn main() {
 
     let mut rate = LoopRateHandler::new(1.0 / DT as f64);
     rate.sleep();
+
+
+    // Handle Camera
+    let mut camera = Camera2D {
+        zoom: vec2(2.0 / screen_width(), -2.0 / screen_height()),
+        target: vec2(screen_width()/2.0, screen_height()/2.0),
+        ..Default::default()
+    };
+
+    let pan_speed = 20.0; // Pan speed
+    let mut zoom_level: f32 = 1.0; // Zoom level
+    let mut mouse_pressed_last_value: Option<(f32, f32)> = None;
+
     // Main simulation Loop
     loop {
+
+        // Handle Pans
+        let screen_width = screen_width();
+        let screen_height = screen_height();
+
+        if is_mouse_button_pressed(MouseButton::Left)
+        {
+            mouse_pressed_last_value = Some(mouse_position());
+        }
+
+        if is_mouse_button_down(MouseButton::Left)
+        {
+
+            match mouse_pressed_last_value {
+                Some((cx, cy)) => {
+                    let (px, py) = mouse_position();
+                    let delta_x = px - cx;
+                    let delta_y = py - cy;
+                    
+                    camera.target.x += pan_speed * delta_x / screen_width;
+                    camera.target.y += pan_speed * delta_y / screen_height;
+                }
+                None => {}
+            }
+        }
+
+        if is_mouse_button_released(MouseButton::Left)
+        {
+            mouse_pressed_last_value = None;
+        }
+
+        let mouse_delta = mouse_wheel();
+
+        // Handle zoom with mouse wheel
+        if mouse_delta != (0.0, 0.0) {
+            let zoom_factor = 1.1;
+            if mouse_delta.0 > 0.0 {
+                zoom_level /= zoom_factor; // Zoom in
+            } else {
+                zoom_level *= zoom_factor; // Zoom out
+            }
+
+            // Ensure zoom level stays within reasonable bounds
+            zoom_level = zoom_level.clamp(0.1, 10.0);
+
+            // Update camera zoom
+            camera.zoom = vec2(zoom_level / screen_width, -zoom_level / screen_height);
+        }
+
+        set_camera(&camera);
+
+
         clear_background(WHITE);
 
         match open_reciever.try_recv() {
@@ -91,7 +156,7 @@ async fn main() {
         }
         {
             let sh = sim_handler_mutex_clone.lock().unwrap();
-            sh.draw_lines();
+            sh.draw_lines_old();
         }
 
         // draw the Egui stuff and macroquad stuff also here only
