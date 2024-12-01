@@ -458,7 +458,78 @@ impl SimulationHandler {
         }
     }
 
-    pub fn draw_lines(&self) {
+    pub fn draw_lines(&self, camera: &Camera2D) {
+        // Calculate the visible screen bounds in world coordinates
+        let screen_size = vec2(screen_width(), screen_height());
+        let top_left = camera.target - screen_size * 0.5 / camera.zoom.x;
+        let bottom_right = camera.target + screen_size * 0.5 / camera.zoom.x;
+    
+        let x_start = top_left.x.floor();
+        let x_end = bottom_right.x.ceil();
+        let y_start = top_left.y.floor();
+        let y_end = bottom_right.y.ceil();
+    
+        // Draw vertical grid lines
+        let mut x = x_start;
+        while x <= x_end {
+            let init_coord = Self::tf_function((x, y_start));
+            let final_coord = Self::tf_function((x, y_end));
+            draw_line(
+                init_coord.0,
+                init_coord.1,
+                final_coord.0,
+                final_coord.1,
+                1.0,
+                LIGHTGRAY,
+            );
+            x += 1.0; // Step size for grid lines
+        }
+    
+        // Draw horizontal grid lines
+        let mut y = y_start;
+        while y <= y_end {
+            let init_coord = Self::tf_function((x_start, y));
+            let final_coord = Self::tf_function((x_end, y));
+            draw_line(
+                init_coord.0,
+                init_coord.1,
+                final_coord.0,
+                final_coord.1,
+                1.0,
+                LIGHTGRAY,
+            );
+            y += 1.0; // Step size for grid lines
+        }
+    
+        // Draw origin lines (axes)
+        let origin_coord = (0.0, 0.0);
+        let one_meter_in_x = (1.0, 0.0);
+        let one_meter_in_y = (0.0, 1.0);
+    
+        let origin_in_pixel_frame = Self::tf_function(origin_coord);
+        let one_meterx_in_pixel_frame = Self::tf_function(one_meter_in_x);
+        let one_metery_in_pixel_frame = Self::tf_function(one_meter_in_y);
+    
+        draw_line(
+            origin_in_pixel_frame.0,
+            origin_in_pixel_frame.1,
+            one_meterx_in_pixel_frame.0,
+            one_meterx_in_pixel_frame.1,
+            2.0,
+            RED,
+        );
+    
+        draw_line(
+            origin_in_pixel_frame.0,
+            origin_in_pixel_frame.1,
+            one_metery_in_pixel_frame.0,
+            one_metery_in_pixel_frame.1,
+            2.0,
+            GREEN,
+        );
+    }
+
+    pub fn draw_lines_old(&self) {
         let _one_meter_step = Self::inverse_scale_function(1.0);
 
         let mut x = XLIMS.0;

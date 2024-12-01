@@ -24,5 +24,9 @@ prost-types = "0.13.3"
 name = "xiron_simulator"
 path = "src/bin/xiron_simulator.rs"
 
+[[bin]]
+name = "camera_pan_tests"
+path = "src/bin/camera_pan_tests.rs"
+
 [build-dependencies]
 prost-build = "0.13.3"
