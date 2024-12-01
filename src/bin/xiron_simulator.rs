@@ -66,7 +66,6 @@ async fn main() {
 
     // Main simulation Loop
     loop {
-
         // Handle Pans
         let screen_width = screen_width();
         let screen_height = screen_height();
@@ -82,8 +81,8 @@ async fn main() {
             match mouse_pressed_last_value {
                 Some((cx, cy)) => {
                     let (px, py) = mouse_position();
-                    let delta_x = px - cx;
-                    let delta_y = py - cy;
+                    let delta_x = cx - px;
+                    let delta_y = cy - py;
                     
                     camera.target.x += pan_speed * delta_x / screen_width;
                     camera.target.y += pan_speed * delta_y / screen_height;
@@ -109,7 +108,7 @@ async fn main() {
             }
 
             // Ensure zoom level stays within reasonable bounds
-            zoom_level = zoom_level.clamp(0.1, 10.0);
+            zoom_level = zoom_level.clamp(0.5, 2.0);
 
             // Update camera zoom
             camera.zoom = vec2(zoom_level / screen_width, -zoom_level / screen_height);
