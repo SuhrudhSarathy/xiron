@@ -102,25 +102,20 @@ async fn main() {
 
         // Check if there were any velocity messages to process.
         let try_recieving_message = xiron_comm_server_rx.try_recv();
-        if let Ok(message) = try_recieving_message
-        {
+        if let Ok(message) = try_recieving_message {
             println!("Recieved Message");
-            match message
-            {
-                Ok(comm_resp) => 
-                {
-                    match comm_resp
-                    {
+            match message {
+                Ok(comm_resp) => {
+                    match comm_resp {
                         CommResponse::Reset(_reset_msg) => {
                             println!("Resetting the simulation");
 
                             // This resets the simulation handler also.
                             egui_handler.reset();
-                        },
+                        }
                         CommResponse::Twist(twist_msg) => {
                             let robot_handler = egui_handler.get_robot_handler(&twist_msg.robot_id);
-                            match robot_handler
-                            {
+                            match robot_handler {
                                 Some(handler) => {
                                     let mut sh = sim_handler_mutex_clone.lock().unwrap();
                                     let linear = twist_msg.linear.unwrap();
@@ -128,20 +123,23 @@ async fn main() {
 
                                     // Set the control value
                                     sh.control(&handler, (linear.x, linear.y, angular));
-                                },
+                                }
                                 None => {
-                                    println!("Robot: {} does not exist in simulation", twist_msg.robot_id);
-                                },
+                                    println!(
+                                        "Robot: {} does not exist in simulation",
+                                        twist_msg.robot_id
+                                    );
+                                }
                             }
-                        },
+                        }
                         _ => {
                             // Ignore any other type.
                         }
                     }
-                },
+                }
                 Err(e) => {
                     println!("Error in recieving from Websocket: {}", e.reason);
-                },
+                }
             }
         }
 
