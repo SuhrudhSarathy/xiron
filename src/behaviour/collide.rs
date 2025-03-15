@@ -8,7 +8,7 @@ impl Collidable for Robot {
         return self.pose;
     }
 
-    fn get_shape(&self) -> Box<dyn Shape> {
+    fn get_shape(&self) -> Box<dyn Shape + Send + Sync> {
         match self.shape {
             Footprint::Circular(b) => {
                 return Box::new(b.clone());
@@ -37,7 +37,7 @@ impl Collidable for Wall {
         return (0.0, 0.0, 0.0);
     }
 
-    fn get_shape(&self) -> Box<dyn Shape> {
+    fn get_shape(&self) -> Box<dyn Shape + Send + Sync> {
         return Box::new(self.shape.clone());
     }
 
@@ -51,7 +51,7 @@ impl Collidable for StaticObj {
         return (self.center.0, self.center.1, 0.0);
     }
 
-    fn get_shape(&self) -> Box<dyn Shape> {
+    fn get_shape(&self) -> Box<dyn Shape + Send + Sync> {
         return Box::new(self.shape);
     }
 
@@ -69,7 +69,7 @@ impl Collidable for DynamicObj {
         );
     }
 
-    fn get_shape(&self) -> Box<dyn Shape> {
+    fn get_shape(&self) -> Box<dyn Shape + Send + Sync> {
         return Box::new(self.shape);
     }
 

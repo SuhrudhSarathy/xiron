@@ -164,8 +164,8 @@ impl Robot {
         match self.drive_type {
             DriveType::Differential => {
                 let theta = normalise(self.pose.2 + self.vel.2 * DT);
-                let x = self.pose.0 + self.vel.0 * self.pose.2.cos() * DT;
-                let y = self.pose.1 + self.vel.0 * self.pose.2.sin() * DT;
+                let x = self.pose.0 + self.vel.0 * theta.cos() * DT;
+                let y = self.pose.1 + self.vel.0 * theta.sin() * DT;
 
                 return (x, y, theta);
             }

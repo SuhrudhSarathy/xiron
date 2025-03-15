@@ -37,7 +37,7 @@ pub struct Config {
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct Twist {
     pub id: String,
-    pub vel: (f32, f32),
+    pub vel: (f32, f32, f32),
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

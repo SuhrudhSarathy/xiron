@@ -103,7 +103,6 @@ async fn main() {
         // Check if there were any velocity messages to process.
         let try_recieving_message = xiron_comm_server_rx.try_recv();
         if let Ok(message) = try_recieving_message {
-            println!("Recieved Message");
             match message {
                 Ok(comm_resp) => {
                     match comm_resp {

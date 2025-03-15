@@ -9,9 +9,9 @@ pub trait Drawable {
     fn draw_bounds(&self, tf: fn((f32, f32)) -> (f32, f32));
 }
 
-pub trait Collidable {
+pub trait Collidable: Send + Sync {
     fn get_pose(&self) -> (f32, f32, f32);
-    fn get_shape(&self) -> Box<dyn Shape>;
+    fn get_shape(&self) -> Box<dyn Shape + Send + Sync>;
     fn get_max_extent(&self) -> f32;
 
     fn collision_check(&self, other: &dyn Collidable) -> bool {

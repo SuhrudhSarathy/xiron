@@ -19,6 +19,7 @@ url = "2.5.2"
 crossbeam = { version = "0.8.4", features = ["crossbeam-channel"] }
 prost = "0.13.3"
 prost-types = "0.13.3"
+rayon = "1.10.0"
 
 [[bin]]
 name = "xiron_simulator"
