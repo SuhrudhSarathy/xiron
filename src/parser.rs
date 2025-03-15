@@ -20,7 +20,7 @@ pub struct StaticObjConfig {
 pub struct RobotConfig {
     pub id: String,
     pub pose: (f32, f32, f32),
-    pub vel: (f32, f32),
+    pub vel: (f32, f32, f32),
     pub lidar: bool,
     pub footprint: Vec<f32>,
     pub drive_type: DriveType,

@@ -37,7 +37,7 @@ impl Default for DriveType {
 pub struct Robot {
     pub id: String,
     pub pose: (f32, f32, f32),
-    pub vel: (f32, f32),
+    pub vel: (f32, f32, f32),
 
     // Collision stuff
     pub shape: Footprint,
@@ -53,7 +53,7 @@ impl Robot {
     pub fn new(
         id: String,
         pose: (f32, f32, f32),
-        vel: (f32, f32),
+        vel: (f32, f32, f32),
         lidar_present: bool,
         footprint: Vec<f32>,
         drive_type: DriveType,
@@ -120,7 +120,7 @@ impl Robot {
         Robot {
             id: id,
             pose: pose,
-            vel: (0.0, 0.0),
+            vel: (0.0, 0.0, 0.0),
             shape: Footprint::Circular(Ball { radius: radius }),
             lidar: vec![LiDAR::new(pose)],
             drive_type: DriveType::Differential,
@@ -128,7 +128,7 @@ impl Robot {
         }
     }
 
-    pub fn control(&mut self, vel: (f32, f32)) {
+    pub fn control(&mut self, vel: (f32, f32, f32)) {
         match self.drive_type {
             // For Ackermann type, the control we get is (acceleration, steering_angle) and not velocity.
             // Here self.vel = (v, theta_dot) that is the first derivative of postion and angle.
@@ -163,13 +163,14 @@ impl Robot {
     pub fn next(&mut self) -> (f32, f32, f32) {
         match self.drive_type {
             DriveType::Differential => {
-                let theta = normalise(self.pose.2 + self.vel.1 * DT);
+                let theta = normalise(self.pose.2 + self.vel.2 * DT);
                 let x = self.pose.0 + self.vel.0 * self.pose.2.cos() * DT;
                 let y = self.pose.1 + self.vel.0 * self.pose.2.sin() * DT;
 
                 return (x, y, theta);
             }
 
+            // Fix this: This should be velocity in body frame and not in world frame
             DriveType::Omnidrive => {
                 let theta = self.pose.2;
                 let x = self.pose.0 + self.vel.0 * DT;

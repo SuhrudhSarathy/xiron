@@ -1,7 +1,5 @@
 use macroquad::prelude::*;
 use pose_msg::PositionMsg;
-use prost::Message;
-use prost_types::Any;
 use std::sync::{Arc, Mutex};
 
 use xiron::prelude::*;
@@ -12,14 +10,12 @@ use std::time::{SystemTime, UNIX_EPOCH};
 async fn main() {
     println!("Xiron Simulator!");
 
-    let ws_subscriber_addr = "localhost:9000";
-    let ws_publisher_addr = "localhost:9001";
+    static XIRON_COMM_SERVER_ADDR: &str = "localhost";
+    let s2c_port = 9000;
+    let c2s_port = 9001;
+    let xiron_comm_server = XironCommServer::new(XIRON_COMM_SERVER_ADDR, s2c_port, c2s_port);
 
-    let ws_subcriber = WebsocketSubscriber::new(ws_subscriber_addr.to_string());
-    let ws_publisher = WebsocketPublisher::new(ws_publisher_addr.to_string());
-
-    let pub_tx = ws_publisher.start();
-    let sub_rx = ws_subcriber.start();
+    let (xiron_comm_server_tx, xiron_comm_server_rx) = xiron_comm_server.start();
 
     let (open_sender, open_reciever) = std::sync::mpsc::channel();
     let (save_sender, save_reciever) = std::sync::mpsc::channel();
@@ -105,41 +101,48 @@ async fn main() {
         egui_macroquad::draw();
 
         // Check if there were any velocity messages to process.
-        let recieved_msg = sub_rx.try_recv();
-        match recieved_msg {
-            Ok(msg) => {
-                let protobuf_message = Any::decode(msg.as_slice());
-                match protobuf_message {
-                    Ok(msg) => {
-                        if msg.type_url == "vel" {
-                            let twist_command_result = TwistMsg::decode(msg.value.as_slice());
-                            match twist_command_result {
-                                Ok(twist_command) => {
-                                    let robot_handler =
-                                        egui_handler.get_robot_handler(&twist_command.robot_id);
-                                    match robot_handler {
-                                        None => {}
-                                        Some(handler) => {
-                                            let mut sh = sim_handler_mutex_clone.lock().unwrap();
-                                            let twist = twist_command.linear.unwrap();
-                                            sh.control(&handler, (twist.x, twist_command.angular));
-                                        }
-                                    }
-                                }
-                                Err(err) => {
-                                    println!("Got Error in parsing velocities: {err}");
-                                }
-                            }
-                        } else if msg.type_url == "reset" {
+        let try_recieving_message = xiron_comm_server_rx.try_recv();
+        if let Ok(message) = try_recieving_message
+        {
+            println!("Recieved Message");
+            match message
+            {
+                Ok(comm_resp) => 
+                {
+                    match comm_resp
+                    {
+                        CommResponse::Reset(_reset_msg) => {
+                            println!("Resetting the simulation");
+
+                            // This resets the simulation handler also.
                             egui_handler.reset();
+                        },
+                        CommResponse::Twist(twist_msg) => {
+                            let robot_handler = egui_handler.get_robot_handler(&twist_msg.robot_id);
+                            match robot_handler
+                            {
+                                Some(handler) => {
+                                    let mut sh = sim_handler_mutex_clone.lock().unwrap();
+                                    let linear = twist_msg.linear.unwrap();
+                                    let angular = twist_msg.angular;
+
+                                    // Set the control value
+                                    sh.control(&handler, (linear.x, linear.y, angular));
+                                },
+                                None => {
+                                    println!("Robot: {} does not exist in simulation", twist_msg.robot_id);
+                                },
+                            }
+                        },
+                        _ => {
+                            // Ignore any other type.
                         }
                     }
-                    Err(err) => {
-                        error!("Error in decoding json message: {}", err)
-                    }
-                }
+                },
+                Err(e) => {
+                    println!("Error in recieving from Websocket: {}", e.reason);
+                },
             }
-            Err(_error) => {}
         }
 
         let time_now = get_time();
@@ -178,33 +181,16 @@ async fn main() {
                             orientation: pose.2,
                         };
 
-                        let packed_msg = Any {
-                            type_url: "pose".to_string(),
-                            value: pose_msg.encode_to_vec(),
-                        };
-                        match pub_tx.send(packed_msg.encode_to_vec()) {
+                        let resp = CommResponse::Pose(pose_msg);
+                        match xiron_comm_server_tx.send(Ok(resp)) {
                             Ok(_) => {}
                             Err(e) => {
                                 println!("Got error when sending pose via channel {}", e);
                             }
                         }
                         let scan = sh.sense(&robot);
-                        let scan_msg = LaserScanMsg {
-                            timestamp: SystemTime::now()
-                                .duration_since(UNIX_EPOCH)
-                                .unwrap()
-                                .as_secs_f64(),
-                            robot_id: robot_name.clone(),
-                            angle_min: scan.angle_min,
-                            angle_max: scan.angle_max,
-                            num_readings: scan.num_readings,
-                            values: scan.values,
-                        };
-                        let packed_msg = Any {
-                            type_url: "scan".to_string(),
-                            value: scan_msg.encode_to_vec(),
-                        };
-                        match pub_tx.send(packed_msg.encode_to_vec()) {
+                        let scan_resp = CommResponse::from((scan, robot_name.clone()));
+                        match xiron_comm_server_tx.send(Ok(scan_resp)) {
                             Ok(_) => {}
                             Err(e) => {
                                 println!("Got error when sending scan via channel {}", e);
