@@ -183,7 +183,7 @@ impl SimulationHandler {
         self.static_objects.push(obj.clone());
     }
 
-    pub fn control(&mut self, robot: &RobotHandler, control: (f32, f32)) {
+    pub fn control(&mut self, robot: &RobotHandler, control: (f32, f32, f32)) {
         self.robots[robot.id].control(control);
     }
 
@@ -407,7 +407,7 @@ impl SimulationHandler {
                 // Collision occurred, move robot to collision point and stop
                 let collision_pose = interpolate_pose(&start_pose, &end_pose, toi);
                 robot.step(&collision_pose);
-                robot.control((0.0, 0.0));
+                robot.control((0.0, 0.0, 0.0));
             } else {
                 // No collision, move to next pose
                 robot.step(&end_pose);
