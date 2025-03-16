@@ -34,6 +34,22 @@ pub enum ObjectParameterType {
     Bounds(f32, f32),
 }
 
+pub struct FullInformation
+{
+    pub id: String,
+    pub pose: (f32, f32, f32),
+    pub velocity: (f32, f32, f32),
+    pub bounds: (f32, f32),
+    pub drive_type: String,
+}
+
+impl Default for FullInformation 
+{
+    fn default() -> Self {
+        Self { id: "ID".to_string(), pose: (0.0, 0.0, 0.0), velocity: (0.0, 0.0, 0.0), bounds: (0.0, 0.0), drive_type: "NA".to_string()}
+    }
+}
+
 pub struct SimulationHandler {
     robots: Vec<Robot>,
     objects: Vec<Box<dyn Genericbject>>,
@@ -294,6 +310,44 @@ impl SimulationHandler {
                 return ObjectParameterType::Rotation(0.0);
             }
         }
+    }
+
+    pub fn get_full_information_of_selected_object(&self, selected_object: (Option<SelectedObjectType>, i32)) -> FullInformation
+    {
+        let (selected_type, index) = selected_object;
+        match selected_type{
+            Some(obj) => {
+                match obj
+                {
+                    SelectedObjectType::Robot => {
+                        let robot = self.robots[index as usize].clone();
+                        let bounds = robot.get_bounds();
+
+                        return FullInformation
+                        {
+                            id: robot.id,
+                            pose: robot.pose,
+                            velocity: robot.vel,
+                            bounds: bounds,
+                            drive_type: robot.drive_type.to_string(),
+                        };
+                    },
+                    SelectedObjectType::Other => {
+                        let obj = &self.objects[index as usize];
+                        return FullInformation
+                        {
+                            id: "Object".to_string(),
+                            pose: obj.get_pose(),
+                            velocity: (0.0, 0.0, 0.0),
+                            bounds: obj.get_bounds(),
+                            drive_type: "NA".to_string(),
+                        }
+                    },
+                }
+            },
+            None => {return FullInformation::default();},
+        }
+
     }
 
     pub fn change_parameters_of_selected_object(
