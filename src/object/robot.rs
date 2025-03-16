@@ -1,5 +1,7 @@
 extern crate rand;
 
+use std::fmt::Display;
+
 use macroquad::prelude::*;
 use parry2d::math::Vector;
 use parry2d::shape::{Ball, Cuboid};
@@ -20,16 +22,30 @@ pub enum Footprint {
     Rectangular(Cuboid),
 }
 
-#[derive(Debug, Clone, Serialize, Deserialize, Copy)]
+#[derive(Debug, Clone, Serialize, Deserialize, Copy, PartialEq)]
 pub enum DriveType {
     Differential,
     Ackermann,
     Omnidrive,
+    Forklift,
 }
 
 impl Default for DriveType {
     fn default() -> Self {
         Self::Differential
+    }
+}
+
+impl Display for DriveType
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self
+        {
+            DriveType::Differential => write!(f, "Differential"),
+            DriveType::Ackermann => write!(f, "Ackermann"),
+            DriveType::Omnidrive => write!(f, "Omnidrive"),
+            DriveType::Forklift => write!(f, "Forklift"),
+        }
     }
 }
 
@@ -129,34 +145,18 @@ impl Robot {
     }
 
     pub fn control(&mut self, vel: (f32, f32, f32)) {
-        match self.drive_type {
-            // For Ackermann type, the control we get is (acceleration, steering_angle) and not velocity.
-            // Here self.vel = (v, theta_dot) that is the first derivative of postion and angle.
-            DriveType::Ackermann => {
-                let bounds = self.get_bounds();
-
-                // Consider the length here
-                let l = bounds.1;
-
-                // v = v + a * dt
-                self.vel.0 = self.vel.0 + vel.0 * DT;
-
-                // w = w + v * tan(delta)/l
-                self.vel.1 = self.vel.1 + self.vel.0 * self.vel.1.tan() / l;
-            }
-            _ => {
-                self.vel = vel;
-            }
-        }
+        self.vel = vel;
 
         if self.add_noise {
             // Add some noise to the velocities
             let mut rand_gen = rand::thread_rng();
-            let v_noise = rand_gen.gen_range(-0.01..0.01);
+            let vx_noise = rand_gen.gen_range(-0.01..0.01);
+            let vy_noise = rand_gen.gen_range(-0.01..0.01);
             let w_noise = rand_gen.gen_range(-0.01..0.01);
 
-            self.vel.0 += v_noise;
-            self.vel.1 += w_noise;
+            self.vel.0 += vx_noise;
+            self.vel.1 += vy_noise;
+            self.vel.2 += w_noise;
         }
     }
 
@@ -170,26 +170,93 @@ impl Robot {
                 return (x, y, theta);
             }
 
-            // Fix this: This should be velocity in body frame and not in world frame
             DriveType::Omnidrive => {
-                let theta = self.pose.2;
-                let x = self.pose.0 + self.vel.0 * DT;
-                let y = self.pose.1 + self.vel.1 * DT;
+                let theta = normalise(self.pose.2 + self.vel.2 * DT);
+                
+                let c_theta = theta.cos();
+                let s_theta = theta.sin();
+                
+                let x = self.pose.0 + (self.vel.0 * c_theta - self.vel.1 * s_theta) * DT;
+                let y = self.pose.1 + (self.vel.0 * s_theta + self.vel.1 * c_theta) * DT;
 
                 return (x, y, theta);
             }
-            // If the Footprint is Circular, the length is considered as 2*r, else its the length
+            
             DriveType::Ackermann => {
-                // Split the controls into (a, delta). These have been computed earlier
-                let v = self.vel.0;
-                let omega = self.vel.1;
+                // Ackermann Controller 
+                // Control input is (vd, delta, 0.0)
+                // We have to convert this to CoM velocities.
+                // In most of the literature, Bicycle Kinematics is derived using the Rear axle.
+                // We continue the same derivation, but apply the resultant control to the CoM.
+                let vd = self.vel.0;
+                let steer = self.vel.1;
+                let l = self.get_bounds().1;
 
-                let theta = normalise(self.pose.2 + omega * DT);
-                let x = self.pose.0 + v * self.pose.2.cos() * DT;
-                let y = self.pose.1 + v * self.pose.2.sin() * DT;
+                // Calculations of the Rear axle
+                let theta_dot = vd * steer.tan() / l;  // theta_dot = v * tan(delta) / L 
+                let x_dot = vd * self.pose.2.cos(); // x_dot = vcos(theta)
+                let y_dot = vd * self.pose.2.sin(); // y_dot = vsin(theta)
+
+                // Project them to the CoM. We get them by differentiating the following equations
+                /*
+                 *  x_com = x + dcos(theta)
+                 *  y_com = y + dsin(theta)
+                 * 
+                 *  x_dot_com = d(x_com)/dt = x_dot - d * sin(theta) * theta_dot
+                 *  y_dot_com = d(y_com)/dt = y_dot + d * cos(theta) * theta_dot
+                 */
+                let d = 0.5 * l;
+                let xdot_com = x_dot - d * self.pose.2.sin() * theta_dot;
+                let ydot_com = y_dot + d * self.pose.2.cos() * theta_dot;
+                let theta_dot_com = theta_dot;
+
+                let theta = normalise(self.pose.2 + theta_dot_com * DT);
+                let x = self.pose.0 + xdot_com * DT;
+                let y = self.pose.1 + ydot_com * DT;
 
                 return (x, y, theta);
             }
+
+            DriveType::Forklift => {
+                // Foklift Controller 
+                // Control input is (vd, delta, 0.0)
+                // We have to convert this to CoM velocities.
+
+                // Get the elocity of driving wheel and steering angle
+                let vd = self.vel.0;
+                let steer = self.vel.1;
+
+                // Get the length between axles
+                let l = self.get_bounds().1;
+
+                // Calculations of the Rear axle
+                // Velocity of rear axle = vd * cos(delta). We get this by projecting
+                // the velocity of front axle onto the real axle
+                let vr = vd * steer.cos();
+                let theta_dot = vr * steer.tan() / l;  // theta_dot = v * tan(delta) / L 
+                let x_dot = vr * self.pose.2.cos(); // x_dot = vcos(theta)
+                let y_dot = vr * self.pose.2.sin(); // y_dot = vsin(theta)
+
+                // Project them to the CoM. We get them by differentiating the following equations
+                /*
+                 *  x_com = x + dcos(theta)
+                 *  y_com = y + dsin(theta)
+                 * 
+                 *  x_dot_com = d(x_com)/dt = x_dot - d * sin(theta) * theta_dot
+                 *  y_dot_com = d(y_com)/dt = y_dot + d * cos(theta) * theta_dot
+                 */
+                let d = 0.5 * l;
+                let xdot_com = x_dot - d * self.pose.2.sin() * theta_dot;
+                let ydot_com = y_dot + d * self.pose.2.cos() * theta_dot;
+                let theta_dot_com = theta_dot;
+
+                let theta = normalise(self.pose.2 + theta_dot_com * DT);
+                let x = self.pose.0 + xdot_com * DT;
+                let y = self.pose.1 + ydot_com * DT;
+
+                return (x, y, theta);
+            }
+            
         }
     }
 

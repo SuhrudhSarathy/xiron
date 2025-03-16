@@ -1,4 +1,4 @@
-use egui_macroquad::egui::{self, Button, TopBottomPanel};
+use egui_macroquad::egui::{self, Button, TopBottomPanel, Window};
 use egui_macroquad::egui::{Context, Visuals};
 use macroquad::prelude::*;
 use std::collections::HashMap;
@@ -6,6 +6,7 @@ use std::future::Future;
 use std::sync::mpsc::Sender;
 use std::sync::{Arc, Mutex};
 
+use crate::object::DriveType;
 use crate::prelude::{
     ObjectParameterType, Robot, RobotHandler, SelectedObjectType, SimulationHandler, StaticObj,
     Wall,
@@ -13,7 +14,7 @@ use crate::prelude::{
 
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum Mode {
-    Robot,
+    Robot(DriveType),
     StaticObj,
     Wall,
     None,
@@ -103,6 +104,10 @@ impl EguiInterface {
             .show(ctx, |ui| self.draw_adding_and_modifying_objects_bar(ui));
         TopBottomPanel::bottom("Play-Pause Button")
             .show(ctx, |ui| self.draw_bottom_play_pause_bar(ui));
+
+        Window::new("Object Info").default_open(true).resizable(false).min_width(400.0).min_height(250.0).show(ctx, |ui| {
+            self.draw_details_of_selected_objects(ui);
+        });
 
         // draw stuff
         self.add_selected_objects_to_canvas();
@@ -235,10 +240,27 @@ impl EguiInterface {
         // Add a menu bar
         ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
             ui.with_layout(egui::Layout::left_to_right(egui::Align::Center), |ui| {
-                let circle_button = ui.add(egui::Button::new("Add Robot ⏺"));
-                if circle_button.clicked() {
-                    self.clicked_mode = Mode::Robot;
-                }
+                ui.menu_button("Add Robot", |ui| {
+                    let diff_button = ui.add(egui::Button::new("Differential"));
+                    if diff_button.clicked() {
+                        self.clicked_mode = Mode::Robot(DriveType::Differential);
+                    }
+
+                    let omni_button = ui.add(egui::Button::new("Omnidrive"));
+                    if omni_button.clicked() {
+                        self.clicked_mode = Mode::Robot(DriveType::Omnidrive);
+                    }
+
+                    let ackermann_button = ui.add(egui::Button::new("Ackermann"));
+                    if ackermann_button.clicked() {
+                        self.clicked_mode = Mode::Robot(DriveType::Ackermann);
+                    }
+
+                    let forklift_button = ui.add(egui::Button::new("Forklift"));
+                    if forklift_button.clicked() {
+                        self.clicked_mode = Mode::Robot(DriveType::Forklift);
+                    }
+                });
 
                 let rectangle_button = ui.add(egui::Button::new("Add Static Obj ▭"));
                 if rectangle_button.clicked() {
@@ -252,20 +274,11 @@ impl EguiInterface {
             });
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-                if ui
-                    .add_enabled(
-                        self.object_select_mode != ObjectSelectMode::Rotate,
-                        egui::Button::new("Modify Rotation"),
-                    )
-                    .clicked()
-                {
-                    self.object_select_mode = ObjectSelectMode::Rotate;
-                }
 
                 if ui
                     .add_enabled(
                         self.object_select_mode != ObjectSelectMode::Bound,
-                        egui::Button::new("Modify Bounds"),
+                        egui::Button::new("Scale"),
                     )
                     .clicked()
                 {
@@ -274,8 +287,18 @@ impl EguiInterface {
 
                 if ui
                     .add_enabled(
+                        self.object_select_mode != ObjectSelectMode::Rotate,
+                        egui::Button::new("Rotate"),
+                    )
+                    .clicked()
+                {
+                    self.object_select_mode = ObjectSelectMode::Rotate;
+                }
+
+                if ui
+                    .add_enabled(
                         self.object_select_mode != ObjectSelectMode::Center,
-                        egui::Button::new("Modify Center"),
+                        egui::Button::new("Move"),
                     )
                     .clicked()
                 {
@@ -294,8 +317,20 @@ impl EguiInterface {
         let (mx, my) = mouse_position();
         let mut sh = self.sim_handler.lock().unwrap();
 
-        if self.clicked_mode == Mode::Robot {
+        let default_width = SimulationHandler::inverse_scale_function(1.0);
+        let default_height = SimulationHandler::inverse_scale_function(0.6);
+
+        let mx_off = mx - 0.5 * default_width;
+        let my_off = my - 0.5 * default_height;
+
+        if self.clicked_mode == Mode::Robot(DriveType::Differential) {
             draw_circle(mx, my, 10.0, BLACK);
+        } else if self.clicked_mode == Mode::Robot(DriveType::Ackermann) {
+            draw_rectangle(mx_off, my_off, default_width, default_height, BLACK);
+        } else if self.clicked_mode == Mode::Robot(DriveType::Omnidrive) {
+            draw_circle(mx, my, 10.0, BLACK);
+        } else if self.clicked_mode == Mode::Robot(DriveType::Forklift) {
+            draw_rectangle(mx_off, my_off, default_width, default_height, BLACK);
         } else if self.clicked_mode == Mode::StaticObj {
             draw_rectangle(mx - 12.5, my - 12.5, 25.0, 25.0, GRAY);
         } else if self.clicked_mode == Mode::Wall {
@@ -345,7 +380,7 @@ impl EguiInterface {
 
         if is_mouse_button_down(MouseButton::Left) {
             let (x, y) = SimulationHandler::get_world_from_pixel(mx, my);
-            if self.clicked_mode == Mode::Robot {
+            if self.clicked_mode == Mode::Robot(DriveType::Differential) {
                 let robot_id = format!("robot{}", self.robot_handlers.len());
                 let (_, robot_handler) = sh.add_robot(Robot::from_id_and_pose(
                     robot_id.clone(),
@@ -356,7 +391,57 @@ impl EguiInterface {
                 self.robot_handlers.push(robot_handler);
                 self.robot_name_map.insert(robot_id, robot_handler);
                 self.clicked_mode = Mode::None;
-            } else if self.clicked_mode == Mode::StaticObj {
+            } else if self.clicked_mode == Mode::Robot(DriveType::Omnidrive) {
+                let robot_id = format!("robot{}", self.robot_handlers.len());
+                let (_, robot_handler) = sh.add_robot(Robot::new(
+                    robot_id.clone(),
+                    (x, y, 0.0),
+                    (0.0, 0.0, 0.0),
+                    true,
+                    vec!{SimulationHandler::scale_function(10.0)},
+                    DriveType::Omnidrive,
+                    false,
+                ));
+
+                self.robot_handlers.push(robot_handler);
+                self.robot_name_map.insert(robot_id, robot_handler);
+                self.clicked_mode = Mode::None;
+            }
+
+            else if self.clicked_mode == Mode::Robot(DriveType::Ackermann) {
+                let robot_id = format!("robot{}", self.robot_handlers.len());
+                let (_, robot_handler) = sh.add_robot(Robot::new(
+                    robot_id.clone(),
+                    (x, y, 0.0),
+                    (0.0, 0.0, 0.0),
+                    true,
+                    vec!{1.0, 0.6},
+                    DriveType::Ackermann,
+                    false,
+                ));
+
+                self.robot_handlers.push(robot_handler);
+                self.robot_name_map.insert(robot_id, robot_handler);
+                self.clicked_mode = Mode::None;
+            }
+
+            else if self.clicked_mode == Mode::Robot(DriveType::Forklift) {
+                let robot_id = format!("robot{}", self.robot_handlers.len());
+                let (_, robot_handler) = sh.add_robot(Robot::new(
+                    robot_id.clone(),
+                    (x, y, 0.0),
+                    (0.0, 0.0, 0.0),
+                    true,
+                    vec!{1.0, 0.6},
+                    DriveType::Forklift,
+                    false,
+                ));
+
+                self.robot_handlers.push(robot_handler);
+                self.robot_name_map.insert(robot_id, robot_handler);
+                self.clicked_mode = Mode::None;
+            }
+            else if self.clicked_mode == Mode::StaticObj {
                 sh.add_static_obj(StaticObj::new(
                     (x, y),
                     SimulationHandler::scale_function(25.0),
@@ -455,6 +540,50 @@ impl EguiInterface {
         }
         if is_key_pressed(KeyCode::Escape) {
             self.nearest_object_index = (None, -1);
+        }
+    }
+
+    /// Function to draw stuff about selected object on the floating Window
+    fn draw_details_of_selected_objects(&mut self, ui: &mut egui::Ui)
+    {
+        let sh = self.sim_handler.lock().unwrap();
+        match self.nearest_object_index.0
+        {
+            Some(obj) => {
+                match obj
+                {
+                    _ => {
+                        let full_information = sh.get_full_information_of_selected_object(self.nearest_object_index);
+                        egui::Grid::new("my_grid")
+                            .num_columns(2)
+                            .spacing([40.0, 4.0])
+                            .striped(true)
+                            .show(ui, |ui| {
+                                ui.label("Id");
+                                ui.label(full_information.id);
+                                ui.end_row();
+
+                                ui.label("Pose");
+                                ui.label(format!("{:.4}, {:.4}, {:.4}", full_information.pose.0, full_information.pose.1, full_information.pose.2));
+                                ui.end_row();
+
+                                ui.label("Velocity");
+                                ui.label(format!("{:.4}, {:.4}, {:.4}", full_information.velocity.0, full_information.velocity.1, full_information.velocity.2));
+                                ui.end_row();
+
+                                ui.label("Bounds");
+                                ui.label(format!("{:.2}, {:.2}", full_information.bounds.0, full_information.bounds.1));
+                                ui.end_row();
+
+                                ui.label("Drive type");
+                                ui.label(full_information.drive_type);
+                                ui.end_row();
+                            });
+                    }
+                }
+
+            }
+            None => {}
         }
     }
 
