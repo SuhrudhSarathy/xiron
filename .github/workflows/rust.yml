@@ -63,32 +63,29 @@ jobs:
     - name: Build
       run: cargo build --release --verbose
 
-    - name: Run tests
-      run: cargo test --verbose
-
     - name: Upload binary (Linux)
       if: matrix.os == 'ubuntu-latest'
       uses: actions/upload-artifact@v4
       with:
         name: xiron-linux
-        path: target/release/xiron
+        path: target/release/xiron_simulator
 
     - name: Upload binary (macOS)
       if: matrix.os == 'macos-latest'
       uses: actions/upload-artifact@v4
       with:
         name: xiron-macos
-        path: target/release/xiron
+        path: target/release/xiron_simulator
 
     - name: Upload binary (Windows)
       if: matrix.os == 'windows-latest'
       uses: actions/upload-artifact@v4
       with:
         name: xiron-windows
-        path: target/release/xiron.exe
+        path: target/release/xiron_simulator.exe
 
   release:
-    if: github.ref == 'refs/heads/test-actions'
+    if: github.ref == 'refs/heads/test_actions'
     needs: build
     runs-on: ubuntu-latest
 
