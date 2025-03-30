@@ -51,8 +51,13 @@ pub fn interpolate_pose(start: &(f32, f32, f32), end: &(f32, f32, f32), t: f32) 
     )
 }
 
-pub fn draw_rotated_rectangle(center: (f32, f32), half_extents: (f32, f32), rotation: f32, color: Color, tf: fn((f32, f32)) -> (f32, f32))
-{
+pub fn draw_rotated_rectangle(
+    center: (f32, f32),
+    half_extents: (f32, f32),
+    rotation: f32,
+    color: Color,
+    tf: fn((f32, f32)) -> (f32, f32),
+) {
     let (x, y) = center;
     let (w, h) = half_extents;
 
@@ -107,9 +112,7 @@ pub fn draw_rotated_rectangle(center: (f32, f32), half_extents: (f32, f32), rota
         },
         color,
     );
-
 }
-
 
 pub struct LoopRateHandler {
     sleep_duration: Duration,

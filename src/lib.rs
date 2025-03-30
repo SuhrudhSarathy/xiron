@@ -10,6 +10,7 @@
 
 pub mod algorithms;
 pub mod behaviour;
+pub mod camera_handler;
 pub mod comms;
 pub mod gui_interface;
 pub mod handler;
@@ -18,4 +19,3 @@ pub mod parameter;
 pub mod parser;
 pub mod prelude;
 pub mod utils;
-pub mod camera_handler;

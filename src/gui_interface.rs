@@ -8,7 +8,8 @@ use std::sync::{Arc, Mutex};
 
 use crate::object::DriveType;
 use crate::prelude::{
-    CameraHandler, ObjectParameterType, Robot, RobotHandler, SelectedObjectType, SimulationHandler, StaticObj, Wall
+    CameraHandler, ObjectParameterType, Robot, RobotHandler, SelectedObjectType, SimulationHandler,
+    StaticObj, Wall,
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -54,6 +55,8 @@ pub struct EguiInterface {
 
     camera_handler: CameraHandler,
 
+    follow_mode: bool,
+
     // local variables
     wall_draw_status: WallDrawStatus,
 }
@@ -76,6 +79,8 @@ impl EguiInterface {
 
             robot_handlers: Vec::new(),
             robot_name_map: HashMap::new(),
+
+            follow_mode: false,
 
             wall_draw_status: WallDrawStatus::Idle,
         }
@@ -106,9 +111,14 @@ impl EguiInterface {
         TopBottomPanel::bottom("Play-Pause Button")
             .show(ctx, |ui| self.draw_bottom_play_pause_bar(ui));
 
-        Window::new("Object Info").default_open(true).resizable(false).min_width(400.0).min_height(250.0).show(ctx, |ui| {
-            self.draw_details_of_selected_objects(ui);
-        });
+        Window::new("Object Info")
+            .default_open(true)
+            .resizable(false)
+            .min_width(400.0)
+            .min_height(250.0)
+            .show(ctx, |ui| {
+                self.draw_details_of_selected_objects(ui);
+            });
 
         // draw stuff
         self.add_selected_objects_to_canvas();
@@ -237,8 +247,7 @@ impl EguiInterface {
         self.reset_robot_handlers(robot_handlers);
     }
 
-    pub fn set_and_update_camera(&mut self)
-    {
+    pub fn set_and_update_camera(&mut self) {
         self.camera_handler.update();
         set_camera(self.camera_handler.get_camera());
     }
@@ -283,7 +292,6 @@ impl EguiInterface {
             });
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
-
                 if ui
                     .add_enabled(
                         self.object_select_mode != ObjectSelectMode::Bound,
@@ -407,7 +415,7 @@ impl EguiInterface {
                     (x, y, 0.0),
                     (0.0, 0.0, 0.0),
                     true,
-                    vec!{SimulationHandler::scale_function(10.0)},
+                    vec![SimulationHandler::scale_function(10.0)],
                     DriveType::Omnidrive,
                     false,
                 ));
@@ -415,16 +423,14 @@ impl EguiInterface {
                 self.robot_handlers.push(robot_handler);
                 self.robot_name_map.insert(robot_id, robot_handler);
                 self.clicked_mode = Mode::None;
-            }
-
-            else if self.clicked_mode == Mode::Robot(DriveType::Ackermann) {
+            } else if self.clicked_mode == Mode::Robot(DriveType::Ackermann) {
                 let robot_id = format!("robot{}", self.robot_handlers.len());
                 let (_, robot_handler) = sh.add_robot(Robot::new(
                     robot_id.clone(),
                     (x, y, 0.0),
                     (0.0, 0.0, 0.0),
                     true,
-                    vec!{1.0, 0.6},
+                    vec![1.0, 0.6],
                     DriveType::Ackermann,
                     false,
                 ));
@@ -432,16 +438,14 @@ impl EguiInterface {
                 self.robot_handlers.push(robot_handler);
                 self.robot_name_map.insert(robot_id, robot_handler);
                 self.clicked_mode = Mode::None;
-            }
-
-            else if self.clicked_mode == Mode::Robot(DriveType::Forklift) {
+            } else if self.clicked_mode == Mode::Robot(DriveType::Forklift) {
                 let robot_id = format!("robot{}", self.robot_handlers.len());
                 let (_, robot_handler) = sh.add_robot(Robot::new(
                     robot_id.clone(),
                     (x, y, 0.0),
                     (0.0, 0.0, 0.0),
                     true,
-                    vec!{1.0, 0.6},
+                    vec![1.0, 0.6],
                     DriveType::Forklift,
                     false,
                 ));
@@ -449,8 +453,7 @@ impl EguiInterface {
                 self.robot_handlers.push(robot_handler);
                 self.robot_name_map.insert(robot_id, robot_handler);
                 self.clicked_mode = Mode::None;
-            }
-            else if self.clicked_mode == Mode::StaticObj {
+            } else if self.clicked_mode == Mode::StaticObj {
                 sh.add_static_obj(StaticObj::new(
                     (x, y),
                     SimulationHandler::scale_function(25.0),
@@ -553,46 +556,69 @@ impl EguiInterface {
     }
 
     /// Function to draw stuff about selected object on the floating Window
-    fn draw_details_of_selected_objects(&mut self, ui: &mut egui::Ui)
-    {
+    fn draw_details_of_selected_objects(&mut self, ui: &mut egui::Ui) {
         let sh = self.sim_handler.lock().unwrap();
-        match self.nearest_object_index.0
-        {
-            Some(obj) => {
-                match obj
-                {
-                    _ => {
-                        let full_information = sh.get_full_information_of_selected_object(self.nearest_object_index);
-                        egui::Grid::new("my_grid")
-                            .num_columns(2)
-                            .spacing([40.0, 4.0])
-                            .striped(true)
-                            .show(ui, |ui| {
-                                ui.label("Id");
-                                ui.label(full_information.id);
-                                ui.end_row();
+        match self.nearest_object_index.0 {
+            Some(obj) => match obj {
+                _ => {
+                    let full_information =
+                        sh.get_full_information_of_selected_object(self.nearest_object_index);
+                    egui::Grid::new("my_grid")
+                        .num_columns(2)
+                        .spacing([40.0, 4.0])
+                        .striped(true)
+                        .show(ui, |ui| {
+                            ui.label("Id");
+                            ui.label(full_information.id);
+                            ui.end_row();
 
-                                ui.label("Pose");
-                                ui.label(format!("{:.4}, {:.4}, {:.4}", full_information.pose.0, full_information.pose.1, full_information.pose.2));
-                                ui.end_row();
+                            ui.label("Pose");
+                            ui.label(format!(
+                                "{:.4}, {:.4}, {:.4}",
+                                full_information.pose.0,
+                                full_information.pose.1,
+                                full_information.pose.2
+                            ));
+                            ui.end_row();
 
-                                ui.label("Velocity");
-                                ui.label(format!("{:.4}, {:.4}, {:.4}", full_information.velocity.0, full_information.velocity.1, full_information.velocity.2));
-                                ui.end_row();
+                            ui.label("Velocity");
+                            ui.label(format!(
+                                "{:.4}, {:.4}, {:.4}",
+                                full_information.velocity.0,
+                                full_information.velocity.1,
+                                full_information.velocity.2
+                            ));
+                            ui.end_row();
 
-                                ui.label("Bounds");
-                                ui.label(format!("{:.2}, {:.2}", full_information.bounds.0, full_information.bounds.1));
-                                ui.end_row();
+                            ui.label("Bounds");
+                            ui.label(format!(
+                                "{:.2}, {:.2}",
+                                full_information.bounds.0, full_information.bounds.1
+                            ));
+                            ui.end_row();
 
-                                ui.label("Drive type");
-                                ui.label(full_information.drive_type);
-                                ui.end_row();
-                            });
+                            ui.label("Drive type");
+                            ui.label(full_information.drive_type);
+                            ui.end_row();
+
+                            ui.label("Follow");
+                            ui.checkbox(&mut self.follow_mode, "");
+                            ui.end_row();
+                        });
+
+                    if self.follow_mode {
+                        self.camera_handler
+                            .set_target(SimulationHandler::tf_function((
+                                full_information.pose.0,
+                                full_information.pose.1,
+                            )));
                     }
                 }
-
+            },
+            None => {
+                self.follow_mode = false;
+                self.camera_handler.reset_follow();
             }
-            None => {}
         }
     }
 

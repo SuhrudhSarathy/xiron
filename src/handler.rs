@@ -34,8 +34,7 @@ pub enum ObjectParameterType {
     Bounds(f32, f32),
 }
 
-pub struct FullInformation
-{
+pub struct FullInformation {
     pub id: String,
     pub pose: (f32, f32, f32),
     pub velocity: (f32, f32, f32),
@@ -43,10 +42,15 @@ pub struct FullInformation
     pub drive_type: String,
 }
 
-impl Default for FullInformation 
-{
+impl Default for FullInformation {
     fn default() -> Self {
-        Self { id: "ID".to_string(), pose: (0.0, 0.0, 0.0), velocity: (0.0, 0.0, 0.0), bounds: (0.0, 0.0), drive_type: "NA".to_string()}
+        Self {
+            id: "ID".to_string(),
+            pose: (0.0, 0.0, 0.0),
+            velocity: (0.0, 0.0, 0.0),
+            bounds: (0.0, 0.0),
+            drive_type: "NA".to_string(),
+        }
     }
 }
 
@@ -312,42 +316,40 @@ impl SimulationHandler {
         }
     }
 
-    pub fn get_full_information_of_selected_object(&self, selected_object: (Option<SelectedObjectType>, i32)) -> FullInformation
-    {
+    pub fn get_full_information_of_selected_object(
+        &self,
+        selected_object: (Option<SelectedObjectType>, i32),
+    ) -> FullInformation {
         let (selected_type, index) = selected_object;
-        match selected_type{
-            Some(obj) => {
-                match obj
-                {
-                    SelectedObjectType::Robot => {
-                        let robot = self.robots[index as usize].clone();
-                        let bounds = robot.get_bounds();
+        match selected_type {
+            Some(obj) => match obj {
+                SelectedObjectType::Robot => {
+                    let robot = self.robots[index as usize].clone();
+                    let bounds = robot.get_bounds();
 
-                        return FullInformation
-                        {
-                            id: robot.id,
-                            pose: robot.pose,
-                            velocity: robot.vel,
-                            bounds: bounds,
-                            drive_type: robot.drive_type.to_string(),
-                        };
-                    },
-                    SelectedObjectType::Other => {
-                        let obj = &self.objects[index as usize];
-                        return FullInformation
-                        {
-                            id: "Object".to_string(),
-                            pose: obj.get_pose(),
-                            velocity: (0.0, 0.0, 0.0),
-                            bounds: obj.get_bounds(),
-                            drive_type: "NA".to_string(),
-                        }
-                    },
+                    return FullInformation {
+                        id: robot.id,
+                        pose: robot.pose,
+                        velocity: robot.vel,
+                        bounds: bounds,
+                        drive_type: robot.drive_type.to_string(),
+                    };
+                }
+                SelectedObjectType::Other => {
+                    let obj = &self.objects[index as usize];
+                    return FullInformation {
+                        id: "Object".to_string(),
+                        pose: obj.get_pose(),
+                        velocity: (0.0, 0.0, 0.0),
+                        bounds: obj.get_bounds(),
+                        drive_type: "NA".to_string(),
+                    };
                 }
             },
-            None => {return FullInformation::default();},
+            None => {
+                return FullInformation::default();
+            }
         }
-
     }
 
     pub fn change_parameters_of_selected_object(
@@ -519,14 +521,28 @@ impl SimulationHandler {
         while x <= 15.0 {
             let init_coord = Self::tf_function((x, -15.0));
             let final_coord = Self::tf_function((x, 15.0));
-            draw_line(init_coord.0, init_coord.1, final_coord.0, final_coord.1, 1.0, LIGHTGRAY);
+            draw_line(
+                init_coord.0,
+                init_coord.1,
+                final_coord.0,
+                final_coord.1,
+                1.0,
+                LIGHTGRAY,
+            );
             x += 1.0;
         }
 
         while y <= 15.0 {
             let init_coord = Self::tf_function((-15.0, y));
             let final_coord = Self::tf_function((15.0, y));
-            draw_line(init_coord.0, init_coord.1, final_coord.0, final_coord.1, 1.0, LIGHTGRAY);
+            draw_line(
+                init_coord.0,
+                init_coord.1,
+                final_coord.0,
+                final_coord.1,
+                1.0,
+                LIGHTGRAY,
+            );
             y += 1.0;
         }
 
@@ -535,10 +551,24 @@ impl SimulationHandler {
         let one_meter_x = Self::tf_function((1.0, 0.0));
         let one_meter_y = Self::tf_function((0.0, 1.0));
 
-        draw_line(origin_in_pixel.0, origin_in_pixel.1, one_meter_x.0, one_meter_x.1, 2.0, RED);
-        draw_line(origin_in_pixel.0, origin_in_pixel.1, one_meter_y.0, one_meter_y.1, 2.0, GREEN);
+        draw_line(
+            origin_in_pixel.0,
+            origin_in_pixel.1,
+            one_meter_x.0,
+            one_meter_x.1,
+            2.0,
+            RED,
+        );
+        draw_line(
+            origin_in_pixel.0,
+            origin_in_pixel.1,
+            one_meter_y.0,
+            one_meter_y.1,
+            2.0,
+            GREEN,
+        );
     }
-    
+
     pub fn draw(&self) {
         for robot in self.robots.iter() {
             robot.draw(Self::tf_function);

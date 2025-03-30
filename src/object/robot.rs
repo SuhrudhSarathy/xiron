@@ -36,11 +36,9 @@ impl Default for DriveType {
     }
 }
 
-impl Display for DriveType
-{
+impl Display for DriveType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self
-        {
+        match self {
             DriveType::Differential => write!(f, "Differential"),
             DriveType::Ackermann => write!(f, "Ackermann"),
             DriveType::Omnidrive => write!(f, "Omnidrive"),
@@ -172,18 +170,18 @@ impl Robot {
 
             DriveType::Omnidrive => {
                 let theta = normalise(self.pose.2 + self.vel.2 * DT);
-                
+
                 let c_theta = theta.cos();
                 let s_theta = theta.sin();
-                
+
                 let x = self.pose.0 + (self.vel.0 * c_theta - self.vel.1 * s_theta) * DT;
                 let y = self.pose.1 + (self.vel.0 * s_theta + self.vel.1 * c_theta) * DT;
 
                 return (x, y, theta);
             }
-            
+
             DriveType::Ackermann => {
-                // Ackermann Controller 
+                // Ackermann Controller
                 // Control input is (vd, delta, 0.0)
                 // We have to convert this to CoM velocities.
                 // In most of the literature, Bicycle Kinematics is derived using the Rear axle.
@@ -193,7 +191,7 @@ impl Robot {
                 let l = self.get_bounds().1;
 
                 // Calculations of the Rear axle
-                let theta_dot = vd * steer.tan() / l;  // theta_dot = v * tan(delta) / L 
+                let theta_dot = vd * steer.tan() / l; // theta_dot = v * tan(delta) / L
                 let x_dot = vd * self.pose.2.cos(); // x_dot = vcos(theta)
                 let y_dot = vd * self.pose.2.sin(); // y_dot = vsin(theta)
 
@@ -201,7 +199,7 @@ impl Robot {
                 /*
                  *  x_com = x + dcos(theta)
                  *  y_com = y + dsin(theta)
-                 * 
+                 *
                  *  x_dot_com = d(x_com)/dt = x_dot - d * sin(theta) * theta_dot
                  *  y_dot_com = d(y_com)/dt = y_dot + d * cos(theta) * theta_dot
                  */
@@ -218,7 +216,7 @@ impl Robot {
             }
 
             DriveType::Forklift => {
-                // Foklift Controller 
+                // Foklift Controller
                 // Control input is (vd, delta, 0.0)
                 // We have to convert this to CoM velocities.
 
@@ -233,7 +231,7 @@ impl Robot {
                 // Velocity of rear axle = vd * cos(delta). We get this by projecting
                 // the velocity of front axle onto the real axle
                 let vr = vd * steer.cos();
-                let theta_dot = vr * steer.tan() / l;  // theta_dot = v * tan(delta) / L 
+                let theta_dot = vr * steer.tan() / l; // theta_dot = v * tan(delta) / L
                 let x_dot = vr * self.pose.2.cos(); // x_dot = vcos(theta)
                 let y_dot = vr * self.pose.2.sin(); // y_dot = vsin(theta)
 
@@ -241,7 +239,7 @@ impl Robot {
                 /*
                  *  x_com = x + dcos(theta)
                  *  y_com = y + dsin(theta)
-                 * 
+                 *
                  *  x_dot_com = d(x_com)/dt = x_dot - d * sin(theta) * theta_dot
                  *  y_dot_com = d(y_com)/dt = y_dot + d * cos(theta) * theta_dot
                  */
@@ -256,7 +254,6 @@ impl Robot {
 
                 return (x, y, theta);
             }
-            
         }
     }
 
@@ -336,27 +333,37 @@ impl Drawable for Robot {
                 let h_new = h - rounded_radius;
 
                 // draw a round rectangle instead of a sharp
-                draw_rotated_rectangle((self.pose.0, self.pose.1), (w_new, h), self.pose.2, BLACK, tf);
-                draw_rotated_rectangle((self.pose.0, self.pose.1), (w, h_new), self.pose.2, BLACK, tf);
+                draw_rotated_rectangle(
+                    (self.pose.0, self.pose.1),
+                    (w_new, h),
+                    self.pose.2,
+                    BLACK,
+                    tf,
+                );
+                draw_rotated_rectangle(
+                    (self.pose.0, self.pose.1),
+                    (w, h_new),
+                    self.pose.2,
+                    BLACK,
+                    tf,
+                );
 
-                let p1 = ( w_new, h_new);
-                let p2 = (w_new, - h_new);
-                let p3 = (- w_new, - h_new);
-                let p4 = (- w_new, h_new);
+                let p1 = (w_new, h_new);
+                let p2 = (w_new, -h_new);
+                let p3 = (-w_new, -h_new);
+                let p4 = (-w_new, h_new);
 
                 let params = vec![p1, p2, p3, p4];
                 let c = self.pose.2.cos();
                 let s = self.pose.2.sin();
 
-                for param in params
-                {
+                for param in params {
                     let (w, h) = param;
                     let cx = self.pose.0 + w * c - h * s;
                     let cy = self.pose.1 + w * s + h * c;
                     let tf_c = tf((cx, cy));
-                    draw_circle(tf_c.0, tf_c.1, rounded_radius/RESOLUTION, BLACK);
+                    draw_circle(tf_c.0, tf_c.1, rounded_radius / RESOLUTION, BLACK);
                 }
-
 
                 // Draw the angle
                 let r = (w * w + h * h).sqrt();

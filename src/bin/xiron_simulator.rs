@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 use pose_msg::PositionMsg;
 use std::sync::{Arc, Mutex};
 
-use xiron::{prelude::*};
+use xiron::prelude::*;
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -51,7 +51,6 @@ async fn main() {
     // Main simulation Loop
     loop {
         clear_background(WHITE);
-
 
         match open_reciever.try_recv() {
             Ok(message) => {
