@@ -51,6 +51,66 @@ pub fn interpolate_pose(start: &(f32, f32, f32), end: &(f32, f32, f32), t: f32) 
     )
 }
 
+pub fn draw_rotated_rectangle(center: (f32, f32), half_extents: (f32, f32), rotation: f32, color: Color, tf: fn((f32, f32)) -> (f32, f32))
+{
+    let (x, y) = center;
+    let (w, h) = half_extents;
+
+    let c = rotation.cos();
+    let s = rotation.sin();
+
+    let x1 = x + w * c - h * s;
+    let y1 = y + w * s + h * c;
+
+    let x2 = x - w * c - h * s;
+    let y2 = y - w * s + h * c;
+
+    let x3 = x - w * c + h * s;
+    let y3 = y - w * s - h * c;
+
+    let x4 = x + w * c + h * s;
+    let y4 = y + w * s - h * c;
+
+    let tf_p1 = tf((x1, y1));
+    let tf_p2 = tf((x2, y2));
+    let tf_p3 = tf((x3, y3));
+    let tf_p4 = tf((x4, y4));
+
+    // Draw the body
+    draw_triangle(
+        Vec2 {
+            x: tf_p1.0,
+            y: tf_p1.1,
+        },
+        Vec2 {
+            x: tf_p2.0,
+            y: tf_p2.1,
+        },
+        Vec2 {
+            x: tf_p3.0,
+            y: tf_p3.1,
+        },
+        color,
+    );
+    draw_triangle(
+        Vec2 {
+            x: tf_p1.0,
+            y: tf_p1.1,
+        },
+        Vec2 {
+            x: tf_p3.0,
+            y: tf_p3.1,
+        },
+        Vec2 {
+            x: tf_p4.0,
+            y: tf_p4.1,
+        },
+        color,
+    );
+
+}
+
+
 pub struct LoopRateHandler {
     sleep_duration: Duration,
     _last_slept_time: Option<Instant>,

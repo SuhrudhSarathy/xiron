@@ -513,68 +513,32 @@ impl SimulationHandler {
     }
 
     pub fn draw_lines(&self) {
-        let _one_meter_step = Self::inverse_scale_function(1.0);
+        let mut x = -15.0;
+        let mut y = -15.0;
 
-        let mut x = XLIMS.0;
-        let mut y = YLIMS.0;
-
-        while x < screen_width() {
-            let init_coord = Self::tf_function((x, YLIMS.0));
-            let final_coord = Self::tf_function((x, screen_height()));
-            draw_line(
-                init_coord.0,
-                init_coord.1,
-                final_coord.0 as f32,
-                final_coord.1,
-                1.0,
-                LIGHTGRAY,
-            );
-
+        while x <= 15.0 {
+            let init_coord = Self::tf_function((x, -15.0));
+            let final_coord = Self::tf_function((x, 15.0));
+            draw_line(init_coord.0, init_coord.1, final_coord.0, final_coord.1, 1.0, LIGHTGRAY);
             x += 1.0;
         }
 
-        while y < screen_height() {
-            let init_coord = Self::tf_function((XLIMS.0, y));
-            let final_coord = Self::tf_function((screen_width(), y));
-            draw_line(
-                init_coord.0,
-                init_coord.1,
-                final_coord.0 as f32,
-                final_coord.1,
-                1.0,
-                LIGHTGRAY,
-            );
-
+        while y <= 15.0 {
+            let init_coord = Self::tf_function((-15.0, y));
+            let final_coord = Self::tf_function((15.0, y));
+            draw_line(init_coord.0, init_coord.1, final_coord.0, final_coord.1, 1.0, LIGHTGRAY);
             y += 1.0;
         }
 
-        // Draw origin
-        let origin_coord = (0.0, 0.0);
-        let one_meter_in_x = (1.0, 0.0);
-        let one_meter_in_y = (0.0, 1.0);
+        // Draw origin axes
+        let origin_in_pixel = Self::tf_function((0.0, 0.0));
+        let one_meter_x = Self::tf_function((1.0, 0.0));
+        let one_meter_y = Self::tf_function((0.0, 1.0));
 
-        let origin_in_pixel_frame = Self::tf_function(origin_coord);
-        let one_meterx_in_pixel_frame = Self::tf_function(one_meter_in_x);
-        let one_metery_in_pixel_frame = Self::tf_function(one_meter_in_y);
-
-        draw_line(
-            origin_in_pixel_frame.0,
-            origin_in_pixel_frame.1,
-            one_meterx_in_pixel_frame.0,
-            one_meterx_in_pixel_frame.1,
-            2.0,
-            RED,
-        );
-
-        draw_line(
-            origin_in_pixel_frame.0,
-            origin_in_pixel_frame.1,
-            one_metery_in_pixel_frame.0,
-            one_metery_in_pixel_frame.1,
-            2.0,
-            GREEN,
-        );
+        draw_line(origin_in_pixel.0, origin_in_pixel.1, one_meter_x.0, one_meter_x.1, 2.0, RED);
+        draw_line(origin_in_pixel.0, origin_in_pixel.1, one_meter_y.0, one_meter_y.1, 2.0, GREEN);
     }
+    
     pub fn draw(&self) {
         for robot in self.robots.iter() {
             robot.draw(Self::tf_function);

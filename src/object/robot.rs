@@ -12,7 +12,7 @@ use crate::behaviour::traits::{Drawable, GuiObject};
 use crate::parameter::{DT, RESOLUTION};
 use crate::parser::RobotConfig;
 use crate::prelude::traits::{Collidable, Genericbject, Sensable};
-use crate::utils::normalise;
+use crate::utils::{draw_rotated_rectangle, normalise};
 
 use super::sensors::{LiDAR, LiDARMsg};
 
@@ -330,57 +330,33 @@ impl Drawable for Robot {
                 let w = extents[0];
                 let h = extents[1];
 
+                let rounded_radius = 0.25 * w;
+
+                let w_new = w - rounded_radius;
+                let h_new = h - rounded_radius;
+
+                // draw a round rectangle instead of a sharp
+                draw_rotated_rectangle((self.pose.0, self.pose.1), (w_new, h), self.pose.2, BLACK, tf);
+                draw_rotated_rectangle((self.pose.0, self.pose.1), (w, h_new), self.pose.2, BLACK, tf);
+
+                let p1 = ( w_new, h_new);
+                let p2 = (w_new, - h_new);
+                let p3 = (- w_new, - h_new);
+                let p4 = (- w_new, h_new);
+
+                let params = vec![p1, p2, p3, p4];
                 let c = self.pose.2.cos();
                 let s = self.pose.2.sin();
 
-                let x1 = self.pose.0 + w * c - h * s;
-                let y1 = self.pose.1 + w * s + h * c;
+                for param in params
+                {
+                    let (w, h) = param;
+                    let cx = self.pose.0 + w * c - h * s;
+                    let cy = self.pose.1 + w * s + h * c;
+                    let tf_c = tf((cx, cy));
+                    draw_circle(tf_c.0, tf_c.1, rounded_radius/RESOLUTION, BLACK);
+                }
 
-                let x2 = self.pose.0 - w * c - h * s;
-                let y2 = self.pose.1 - w * s + h * c;
-
-                let x3 = self.pose.0 - w * c + h * s;
-                let y3 = self.pose.1 - w * s - h * c;
-
-                let x4 = self.pose.0 + w * c + h * s;
-                let y4 = self.pose.1 + w * s - h * c;
-
-                let tf_p1 = tf((x1, y1));
-                let tf_p2 = tf((x2, y2));
-                let tf_p3 = tf((x3, y3));
-                let tf_p4 = tf((x4, y4));
-
-                // Draw the body
-                draw_triangle(
-                    Vec2 {
-                        x: tf_p1.0,
-                        y: tf_p1.1,
-                    },
-                    Vec2 {
-                        x: tf_p2.0,
-                        y: tf_p2.1,
-                    },
-                    Vec2 {
-                        x: tf_p3.0,
-                        y: tf_p3.1,
-                    },
-                    BLACK,
-                );
-                draw_triangle(
-                    Vec2 {
-                        x: tf_p1.0,
-                        y: tf_p1.1,
-                    },
-                    Vec2 {
-                        x: tf_p3.0,
-                        y: tf_p3.1,
-                    },
-                    Vec2 {
-                        x: tf_p4.0,
-                        y: tf_p4.1,
-                    },
-                    BLACK,
-                );
 
                 // Draw the angle
                 let r = (w * w + h * h).sqrt();

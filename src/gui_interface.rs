@@ -8,8 +8,7 @@ use std::sync::{Arc, Mutex};
 
 use crate::object::DriveType;
 use crate::prelude::{
-    ObjectParameterType, Robot, RobotHandler, SelectedObjectType, SimulationHandler, StaticObj,
-    Wall,
+    CameraHandler, ObjectParameterType, Robot, RobotHandler, SelectedObjectType, SimulationHandler, StaticObj, Wall
 };
 
 #[derive(Debug, PartialEq, Clone, Copy)]
@@ -53,6 +52,8 @@ pub struct EguiInterface {
     pub robot_handlers: Vec<RobotHandler>,
     pub robot_name_map: HashMap<String, RobotHandler>,
 
+    camera_handler: CameraHandler,
+
     // local variables
     wall_draw_status: WallDrawStatus,
 }
@@ -68,7 +69,7 @@ impl EguiInterface {
             nearest_object_index: (None, -1),
             play: PlayMode::Play,
             sim_handler: sim_handler_mutex,
-
+            camera_handler: CameraHandler::new(),
             open_file_path_sender: open_sender,
             save_file_path_sender: save_sender,
             object_select_mode: ObjectSelectMode::None,
@@ -228,10 +229,18 @@ impl EguiInterface {
         let mut sh = self.sim_handler.lock().unwrap();
         let robot_handlers = sh.reset();
 
+        self.camera_handler.reset();
+
         // Drop sh to make take ownership of self
         drop(sh);
 
         self.reset_robot_handlers(robot_handlers);
+    }
+
+    pub fn set_and_update_camera(&mut self)
+    {
+        self.camera_handler.update();
+        set_camera(self.camera_handler.get_camera());
     }
 
     /// Draws buttons for adding Robot, Static Object and Wall to the screen.
@@ -314,7 +323,7 @@ impl EguiInterface {
 
     /// Draws the selected objects to screen and also updates the Simulation handler when clicked.
     fn add_selected_objects_to_canvas(&mut self) {
-        let (mx, my) = mouse_position();
+        let (mx, my) = self.camera_handler.mouse_position();
         let mut sh = self.sim_handler.lock().unwrap();
 
         let default_width = SimulationHandler::inverse_scale_function(1.0);
@@ -341,7 +350,7 @@ impl EguiInterface {
                 }
                 WallDrawStatus::WallStart => {
                     if is_mouse_button_pressed(MouseButton::Left) {
-                        let (mx, my) = mouse_position();
+                        let (mx, my) = self.camera_handler.mouse_position();
                         let wall_coords_vector: Vec<(f32, f32)> = vec![(mx, my)];
                         self.wall_draw_status = WallDrawStatus::WallMid(wall_coords_vector);
                     }
@@ -457,7 +466,7 @@ impl EguiInterface {
 
     /// Fucntion to deal when an object is clicked
     fn deal_with_click_on_objects(&mut self, _ctx: &egui::Context) {
-        let (mx, my) = mouse_position();
+        let (mx, my) = self.camera_handler.mouse_position();
         let (x, y) = SimulationHandler::get_world_from_pixel(mx, my);
 
         let mut sh = self.sim_handler.lock().unwrap();
@@ -489,7 +498,7 @@ impl EguiInterface {
                     match self.object_select_mode {
                         ObjectSelectMode::None => {}
                         ObjectSelectMode::Bound => {
-                            let (mx, my) = mouse_position();
+                            let (mx, my) = self.camera_handler.mouse_position();
                             let (wx, wy) = SimulationHandler::get_world_from_pixel(mx, my);
                             let center = sh.get_parameters_of_selected_object(
                                 self.nearest_object_index,
@@ -509,7 +518,7 @@ impl EguiInterface {
                             }
                         }
                         ObjectSelectMode::Center => {
-                            let (mx, my) = mouse_position();
+                            let (mx, my) = self.camera_handler.mouse_position();
                             let (wx, wy) = SimulationHandler::get_world_from_pixel(mx, my);
                             sh.change_parameters_of_selected_object(
                                 (object_type, index),
@@ -517,7 +526,7 @@ impl EguiInterface {
                             );
                         }
                         ObjectSelectMode::Rotate => {
-                            let (mx, my) = mouse_position();
+                            let (mx, my) = self.camera_handler.mouse_position();
                             let (wx, wy) = SimulationHandler::get_world_from_pixel(mx, my);
                             let center = sh.get_parameters_of_selected_object(
                                 self.nearest_object_index,
@@ -613,7 +622,7 @@ impl EguiInterface {
                     ui.label(format!("Made with {} by Suhrudh", "♡"));
                 },
             );
-            let (mx, my) = mouse_position();
+            let (mx, my) = self.camera_handler.mouse_position();
             let (wx, wy) = SimulationHandler::get_world_from_pixel(mx, my);
 
             ui.with_layout(egui::Layout::right_to_left(egui::Align::TOP), |ui| {

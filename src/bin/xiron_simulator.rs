@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 use pose_msg::PositionMsg;
 use std::sync::{Arc, Mutex};
 
-use xiron::prelude::*;
+use xiron::{prelude::*};
 
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -47,9 +47,11 @@ async fn main() {
 
     let mut rate = LoopRateHandler::new(1.0 / DT as f64);
     rate.sleep();
+
     // Main simulation Loop
     loop {
         clear_background(WHITE);
+
 
         match open_reciever.try_recv() {
             Ok(message) => {
@@ -98,6 +100,7 @@ async fn main() {
             sh.draw();
         }
 
+        egui_handler.set_and_update_camera();
         egui_macroquad::draw();
 
         // Check if there were any velocity messages to process.
